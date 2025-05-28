@@ -18,7 +18,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     @Query("SELECT e FROM Employee e " +
             " JOIN e.account a" +
             " WHERE a.username = :username AND a.password = :password")
-    Employee findByUsernameAndPassword(String username, String password);
+    Employee findByUsernameAndPassword(@Param("username") String username,
+                                       @Param("password") String password);
 
     Optional<Employee> findByEmail(String email);
 
