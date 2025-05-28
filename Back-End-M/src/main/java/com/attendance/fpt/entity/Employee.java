@@ -48,10 +48,8 @@ public class Employee {
     private List<WorkShiftAssignment> workShiftAssignments;
     
     @OneToMany(mappedBy = "employee")
-    private List<Complaints> complaints;
-    
+    private List<Complaint> complaints;
 
-    
     @OneToMany(mappedBy = "employee")
     private List<LeaveBalance> leaveBalance;
 } 

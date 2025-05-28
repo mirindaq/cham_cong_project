@@ -22,9 +22,13 @@ public class LeaveRequest {
     private LocalDate startDate;
     private LocalDate endDate;
     private String reason;
+
     private String responseNote;
     private LocalDateTime responseDate;
-    private String responseBy;
+
+    @ManyToOne
+    @JoinColumn(name = "response_by")
+    private Employee responseBy;
     
     @ManyToOne
     @JoinColumn(name = "employee_id")
@@ -36,4 +40,12 @@ public class LeaveRequest {
     
     @Enumerated(EnumType.STRING)
     private LeaveRequestStatus status;
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
 } 

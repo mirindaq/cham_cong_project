@@ -20,4 +20,13 @@ export const userApi = {
     const response = await http.put(`/employees/update/${userId}`, userData);
     return response.data;
   },
+
+  updateProfile: async (employeeId: number, profileData: any) => {
+    const response = await http.put(`/employees/update-profile/${employeeId}`, profileData);
+    return response.data;
+  },
+  countAllUsers: async () => {
+    const response = await http.get('/employees/count');
+    return response.data;
+  }
 };

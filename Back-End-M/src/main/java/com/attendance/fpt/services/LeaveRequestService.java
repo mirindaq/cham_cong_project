@@ -10,5 +10,7 @@ public interface LeaveRequestService {
     LeaveRequestResponse createLeaveRequest(LeaveRequestAddRequest request);
     void recallLeaveRequest(Long id);
     void rejectLeaveRequest(Long id);
-    ResponseWithPagination<List<LeaveRequestResponse>>getAllLeaveRequests(int page, int size);
-} 
+    ResponseWithPagination<List<LeaveRequestResponse>> getAllLeaveRequests(int page, int limit);
+    ResponseWithPagination<List<LeaveRequestResponse>> getAllLeaveRequestsByEmployee(int page, int limit, Long employeeId);
+    List<LeaveRequestResponse> getPendingLeaveRequests();
+}

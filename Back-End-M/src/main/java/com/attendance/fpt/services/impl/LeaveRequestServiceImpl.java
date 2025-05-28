@@ -19,11 +19,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -84,20 +86,43 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
     }
 
     @Override
-    public ResponseWithPagination<List<LeaveRequestResponse>> getAllLeaveRequests(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+    public ResponseWithPagination<List<LeaveRequestResponse>> getAllLeaveRequests(int page, int limit) {
+        Pageable pageable = PageRequest.of(page-1, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<LeaveRequest> leaveRequests = leaveRequestRepository.findAll(pageable);
-        
+
         Page<LeaveRequestResponse> responsePage = leaveRequests.map(LeaveRequestConverter::toResponse);
 
         return ResponseWithPagination.<List<LeaveRequestResponse>>builder()
                 .data(responsePage.getContent())
                 .totalItem((int) responsePage.getTotalElements())
                 .totalPage(responsePage.getTotalPages())
-                .limit(size)
+                .limit(limit)
                 .page(page)
                 .build();
     }
 
+    @Override
+    public ResponseWithPagination<List<LeaveRequestResponse>> getAllLeaveRequestsByEmployee(int page, int limit, Long employeeId) {
+        Pageable pageable = PageRequest.of(page-1, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<LeaveRequest> leaveRequests = leaveRequestRepository.findAllByEmployee_Id(employeeId,pageable);
+
+        Page<LeaveRequestResponse> responsePage = leaveRequests.map(LeaveRequestConverter::toResponse);
+
+        return ResponseWithPagination.<List<LeaveRequestResponse>>builder()
+                .data(responsePage.getContent())
+                .totalItem((int) responsePage.getTotalElements())
+                .totalPage(responsePage.getTotalPages())
+                .limit(limit)
+                .page(page)
+                .build();
+    }
+
+    @Override
+    public List<LeaveRequestResponse> getPendingLeaveRequests() {
+        return leaveRequestRepository.findByStatusOrderByCreatedAtAsc(LeaveRequestStatus.PENDING)
+                .stream()
+                .map(LeaveRequestConverter::toResponse)
+                .collect(Collectors.toList());
+    }
 
 } 

@@ -48,7 +48,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { name: "Phân công ca làm việc", href: "/admin/shiff-assignment", icon: Users },
     { name: "Vị trí", href: "/admin/locations", icon: MapPin },
     { name: "Phê duyệt", href: "/admin/approvals", icon: ClipboardCheck },
-    { name: "Quản lý nghỉ phép", href: "/admin/leave-balance", icon: Users },
+    { name: "Quản lý số ngày nghỉ phép", href: "/admin/leave-balance", icon: Users },
+    { name: "Chấm công", href: "/admin/attendances", icon: Users },
     { name: "Báo cáo", href: "/admin/reports", icon: FileText },
     { name: "Hồ sơ cá nhân", href: "/admin/profile", icon: User },
 
@@ -105,7 +106,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Admin User</DropdownMenuLabel>
+                <DropdownMenuLabel>{localStorageUtil.getUserFromLocalStorage()?.fullName}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {/* <DropdownMenuItem asChild>
                   <Link to="/admin/settings">
@@ -128,7 +129,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </div>
       </header>
       <div className="flex flex-1">
-        <aside className="hidden w-64 border-r bg-muted/40 lg:block">
+        <aside className="hidden w-64 border-r bg-muted/40 lg:block sticky top-16 h-[calc(100vh-4rem)]">
           <nav className="flex flex-col gap-2 p-4">
             {navigation.map((item) => (
               <Link

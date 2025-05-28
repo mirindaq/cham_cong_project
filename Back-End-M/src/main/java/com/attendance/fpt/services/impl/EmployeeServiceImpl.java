@@ -10,6 +10,7 @@ import com.attendance.fpt.enums.Role;
 import com.attendance.fpt.exceptions.custom.ConflictException;
 import com.attendance.fpt.exceptions.custom.ResourceNotFoundException;
 import com.attendance.fpt.model.request.EmployeeAddRequest;
+import com.attendance.fpt.model.request.EmployeeProfileRequest;
 import com.attendance.fpt.model.response.EmployeeResponse;
 import com.attendance.fpt.model.response.ResponseWithPagination;
 import com.attendance.fpt.repositories.*;
@@ -130,6 +131,20 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
+    public EmployeeResponse updateProfile(Long employeeId, EmployeeProfileRequest employeeProfileRequest) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+        if (!employee.getPhone().equals(employeeProfileRequest.getPhone()) && employeeRepository.existsByPhone(employeeProfileRequest.getPhone())) {
+            throw new ConflictException("Phone already exists");
+        }
+        employee.setPhone(employeeProfileRequest.getPhone());
+        employee.setAddress(employeeProfileRequest.getAddress());
+        employee.setDob(employeeProfileRequest.getDob());
+
+        return EmployeeConverter.toResponse(employeeRepository.save(employee));
+    }
+
+    @Override
     public ResponseWithPagination<List<EmployeeResponse>> getAllEmployees(
             int page,
             int limit,
@@ -164,4 +179,10 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
         return EmployeeConverter.toResponse(employee);
     }
+
+    @Override
+    public long countEmployees() {
+        return employeeRepository.count();
+    }
+
 }

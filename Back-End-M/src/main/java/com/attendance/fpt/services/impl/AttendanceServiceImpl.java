@@ -160,6 +160,30 @@ public class AttendanceServiceImpl implements AttendanceService {
         return AttendanceWorkShiftConverter.toResponseHaveAttendance(attendance.getWorkShiftAssignment(),attendanceRepository.save(attendance));
     }
 
+    @Override
+    public List<AttendanceWorkShiftResponse> getAllAttendances() {
+    List<Attendance> attendances = attendanceRepository.findAll();
+        if (!attendances.isEmpty()) {
+            return attendances.stream()
+                    .map(attendance -> AttendanceWorkShiftConverter.toResponseHaveAttendance(
+                            attendance.getWorkShiftAssignment(), attendance))
+                    .toList();
+        }
+        return List.of();
+    }
+
+    @Override
+    public List<AttendanceWorkShiftResponse> getRecentCheckers() {
+        List<Attendance> recentAttendances = attendanceRepository.findRecentCheckers();
+        if (!recentAttendances.isEmpty()) {
+            return recentAttendances.stream()
+                    .map(attendance -> AttendanceWorkShiftConverter.toResponseHaveAttendance(
+                            attendance.getWorkShiftAssignment(), attendance))
+                    .toList();
+        }
+        return List.of();
+    }
+
     private Integer calculateLateMinutes(LocalTime checkInTime, LocalTime shiftStartTime) {
         return (int) java.time.Duration.between(shiftStartTime, checkInTime).toMinutes();
     }

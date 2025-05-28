@@ -18,6 +18,8 @@ public class LeaveRequestResponse {
     private LocalDateTime responseDate;
     private String responseBy;
     private String employeeName;
+    private String departmentName;
     private LeaveTypeResponse leaveType;
     private LeaveRequestStatus status;
+    private LocalDateTime createdAt;
 } 

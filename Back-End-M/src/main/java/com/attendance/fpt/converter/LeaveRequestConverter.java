@@ -13,10 +13,12 @@ public class LeaveRequestConverter {
                 .reason(leaveRequest.getReason())
                 .responseNote(leaveRequest.getResponseNote())
                 .responseDate(leaveRequest.getResponseDate())
-                .responseBy(leaveRequest.getResponseBy())
+                .responseBy(leaveRequest.getResponseBy() != null ? leaveRequest.getResponseBy().getFullName() : null)
                 .employeeName(leaveRequest.getEmployee().getFullName())
                 .leaveType(LeaveTypeConverter.toResponse(leaveRequest.getLeaveType()))
+                .departmentName(leaveRequest.getEmployee().getDepartment() != null ? leaveRequest.getEmployee().getDepartment().getName() : null)
                 .status(leaveRequest.getStatus())
+                .createdAt(leaveRequest.getCreatedAt())
                 .build();
     }
 

@@ -1,9 +1,13 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AdminLayout } from "@/components/admin-layout"
+import { attendanceApi } from "@/services/attendance.service"
+import { leaveRequestApi } from "@/services/leaveRequest.service"
+import { complaintApi } from "@/services/complaint.service"
 import {
   BarChart,
   Bar,
@@ -17,10 +21,99 @@ import {
   Pie,
   Cell,
 } from "recharts"
+import { userApi } from "@/services/user.service"
+import { useNavigate } from "react-router"
+
+interface WorkShift {
+  id: number
+  name: string
+  startTime: string
+  endTime: string
+}
+
+interface WorkShiftAssignment {
+  id: number
+  dateAssign: string
+  workShift: WorkShift
+  employeeId: number
+  employeeName: string
+  employeeDepartmentName: string
+}
+
+interface RecentActivity {
+  workShifts: WorkShiftAssignment
+  date: string
+  checkIn: string
+  checkOut: string
+  attendanceId: number
+  locationName: string
+  status: string
+}
+
+interface LeaveRequest {
+  id: number
+  startDate: string
+  endDate: string
+  reason: string
+  responseNote: string | null
+  responseDate: string | null
+  responseBy: number | null
+  employeeName: string
+  departmentName: string
+  leaveType: {
+    id: number
+    name: string
+    maxDayPerYear: number
+  }
+  status: string
+}
+
+interface Complaint {
+  id: number
+  reason: string
+  responseDate: string | null
+  date: string
+  responseNote: string | null
+  responseByFullName: string | null
+  employeeFullName: string
+  complaintType: string
+  departmentName: string
+  createdAt: string
+  status: string
+}
 
 function AdminDashboard() {
-  const [selectedLocation, setSelectedLocation] = useState("all")
-  const [selectedDepartment, setSelectedDepartment] = useState("all")
+  const [isLoading, setIsLoading] = useState(true)
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
+  const [totalUsers, setTotalUsers] = useState(0)
+  const [pendingLeaveRequests, setPendingLeaveRequests] = useState<LeaveRequest[]>([])
+  const [pendingComplaints, setPendingComplaints] = useState<Complaint[]>([])
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true)
+        const [activitiesData, usersData, leaveRequestsData, complaintsData] = await Promise.all([
+          attendanceApi.getRecentAttendances(),
+          userApi.countAllUsers(),
+          leaveRequestApi.getPendingLeaveRequests(),
+          complaintApi.getPendingComplaints()
+        ])
+
+        setRecentActivities(activitiesData.data)
+        setTotalUsers(usersData.data)
+        setPendingLeaveRequests(leaveRequestsData.data)
+        setPendingComplaints(complaintsData.data)
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   // Mock data for charts
   const attendanceData = [
@@ -41,34 +134,15 @@ function AdminDashboard() {
 
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"]
 
-  // Mock data for pending approvals
-  const pendingApprovals = [
-    { id: 1, employee: "Jane Smith", type: "Yêu cầu nghỉ phép", date: "2025-05-18", details: "Nghỉ phép năm (3 ngày)" },
-    {
-      id: 2,
-      employee: "Mike Johnson",
-      type: "Khiếu nại chấm công",
-      date: "2025-05-17",
-      details: "Không check-out vào 2025-05-16",
-    },
-    { id: 3, employee: "Sarah Williams", type: "Yêu cầu nghỉ phép", date: "2025-05-16", details: "Nghỉ ốm (1 ngày)" },
-    {
-      id: 4,
-      employee: "Robert Brown",
-      type: "Khiếu nại chấm công",
-      date: "2025-05-15",
-      details: "Lỗi hệ thống vào 2025-05-14",
-    },
-  ]
-
-  // Mock data for recent activities
-  const recentActivities = [
-    { id: 1, employee: "John Doe", action: "Check-in", time: "08:45", location: "Trụ sở chính" },
-    { id: 2, employee: "Jane Smith", action: "Yêu cầu nghỉ phép", time: "09:15", location: "N/A" },
-    { id: 3, employee: "Mike Johnson", action: "Check-in", time: "08:30", location: "Chi nhánh" },
-    { id: 4, employee: "Sarah Williams", action: "Check-out", time: "17:30", location: "Trụ sở chính" },
-    { id: 5, employee: "Robert Brown", action: "Gửi khiếu nại", time: "16:45", location: "N/A" },
-  ]
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        </div>
+      </AdminLayout>
+    )
+  }
 
   return (
     <AdminLayout>
@@ -78,8 +152,8 @@ function AdminDashboard() {
             <CardTitle className="text-sm font-medium">Tổng nhân viên</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">53</div>
-            <p className="text-xs text-muted-foreground">+2 so với tháng trước</p>
+            <div className="text-2xl font-bold">{totalUsers}</div>
+            <p className="text-xs text-muted-foreground">Đang có trong hệ thống</p>
           </CardContent>
         </Card>
         <Card>
@@ -96,8 +170,8 @@ function AdminDashboard() {
             <CardTitle className="text-sm font-medium">Chờ duyệt</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">7</div>
-            <p className="text-xs text-muted-foreground">4 yêu cầu nghỉ phép, 3 khiếu nại</p>
+            <div className="text-2xl font-bold">{pendingLeaveRequests.length + pendingComplaints.length}</div>
+            <p className="text-xs text-muted-foreground">{pendingLeaveRequests.length} yêu cầu nghỉ phép, {pendingComplaints.length} khiếu nại</p>
           </CardContent>
         </Card>
       </div>
@@ -172,29 +246,63 @@ function AdminDashboard() {
             <CardDescription>Các yêu cầu cần xử lý</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {pendingApprovals.map((item) => (
-                <div key={item.id} className="flex items-center justify-between border-b pb-4">
-                  <div>
-                    <p className="font-medium">{item.employee}</p>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{item.type}</Badge>
-                      <span className="text-sm text-muted-foreground">{item.date}</span>
+            <Tabs defaultValue="leave" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="leave">Nghỉ phép</TabsTrigger>
+                <TabsTrigger value="complaints">Khiếu nại</TabsTrigger>
+              </TabsList>
+              <TabsContent value="leave">
+                <div className="space-y-4">
+                  {pendingLeaveRequests.slice(0, 3).map((item) => (
+                    <div key={item.id} className="flex items-center justify-between border-b pb-4">
+                      <div>
+                        <p className="font-medium">{item.employeeName}</p>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">Yêu cầu nghỉ phép</Badge>
+                          <span className="text-sm text-muted-foreground">{item.startDate}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {item.leaveType.name} ({new Date(item.startDate).toLocaleDateString()} - {new Date(item.endDate).toLocaleDateString()})
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline">
+                          Từ chối
+                        </Button>
+                        <Button size="sm">Duyệt</Button>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">{item.details}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline">
-                      Từ chối
-                    </Button>
-                    <Button size="sm">Duyệt</Button>
-                  </div>
+                  ))}
                 </div>
-              ))}
-              <Button variant="outline" className="w-full">
-                Xem tất cả
-              </Button>
-            </div>
+              </TabsContent>
+              <TabsContent value="complaints">
+                <div className="space-y-4">
+                  {pendingComplaints.slice(0, 3).map((item) => (
+                    <div key={item.id} className="flex items-center justify-between border-b pb-4">
+                      <div>
+                        <p className="font-medium">{item.employeeFullName}</p>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">Khiếu nại chấm công</Badge>
+                          <span className="text-sm text-muted-foreground">{item.date}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {item.complaintType}: {item.reason}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline">
+                          Từ chối
+                        </Button>
+                        <Button size="sm">Duyệt</Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
+            <Button variant="outline" className="w-full mt-4 hover:cursor-pointer" onClick={() => navigate("/admin/approvals")}>
+              Xem tất cả
+            </Button>
           </CardContent>
         </Card>
 
@@ -205,21 +313,51 @@ function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between border-b pb-4">
-                  <div>
-                    <p className="font-medium">{activity.employee}</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">{activity.action}</span>
-                      <span className="text-sm text-muted-foreground">{activity.time}</span>
+              {recentActivities?.map((activity) => (
+                <div key={activity.attendanceId} className="flex items-center justify-between border-b pb-4">
+                  <div className="w-full">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-base font-medium">{activity.workShifts.employeeName}</p>
+                      {activity.checkOut ? (
+                        <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">Đã kết thúc ca</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">Đang làm việc</Badge>
+                      )}
                     </div>
-                    {activity.location !== "N/A" && (
-                      <p className="text-sm text-muted-foreground mt-1">Vị trí: {activity.location}</p>
-                    )}
+                    <div className="space-y-2">
+                      {activity.checkOut ? (
+                        <div className="bg-gray-50 p-2 rounded-md">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs text-muted-foreground">Check-out:</span>
+                            <span className="text-xs">{new Date(activity.checkOut).toLocaleTimeString()}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Thời gian làm việc:</span>
+                            <span className="text-xs">
+                              {new Date(activity.checkIn).toLocaleTimeString()} - {new Date(activity.checkOut).toLocaleTimeString()}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-gray-50 p-2 rounded-md">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Check-in:</span>
+                            <span className="text-xs">{new Date(activity.checkIn).toLocaleTimeString()}</span>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>Ca: {activity.workShifts.workShift.name}</span>
+                        <span>•</span>
+                        <span>{activity.workShifts.workShift.startTime} - {activity.workShifts.workShift.endTime}</span>
+                        <span>•</span>
+                        <span>Vị trí: {activity.locationName}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full hover:cursor-pointer" onClick={() => navigate("/admin/attendances")}>
                 Xem tất cả
               </Button>
             </div>

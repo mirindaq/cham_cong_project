@@ -14,7 +14,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("${api.prefix}/leave-types")
+    @RequestMapping("${api.prefix}/leave-types")
 public class LeaveTypeController {
     private final LeaveTypeService leaveTypeService;
 

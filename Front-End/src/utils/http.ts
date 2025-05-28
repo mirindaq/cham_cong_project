@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from 'sonner';
 
 const http = axios.create({
   baseURL: 'http://localhost:8080/api/v1',  // Thay bằng URL backend của bạn
@@ -29,6 +30,7 @@ http.interceptors.response.use(
       // Xử lý logout hoặc refresh token
       console.log('Unauthorized, please login again.');
     }
+    // toast.error(error.response?.data?.message || "Có lỗi xảy ra khi cập nhật thông tin. Vui lòng thử lại!")
     return Promise.reject(error);
   }
 );

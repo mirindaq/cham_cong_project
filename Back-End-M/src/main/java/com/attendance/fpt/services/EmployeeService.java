@@ -1,6 +1,7 @@
 package com.attendance.fpt.services;
 
 import com.attendance.fpt.model.request.EmployeeAddRequest;
+import com.attendance.fpt.model.request.EmployeeProfileRequest;
 import com.attendance.fpt.model.response.EmployeeResponse;
 import com.attendance.fpt.model.response.ResponseWithPagination;
 
@@ -11,6 +12,8 @@ public interface EmployeeService {
     EmployeeResponse addEmployee(EmployeeAddRequest employeeAddRequest);
 
     EmployeeResponse updateEmployee(Long employeeId, EmployeeAddRequest employeeAddRequest);
+
+    EmployeeResponse updateProfile(Long employeeId, EmployeeProfileRequest employeeProfileRequest);
 
     ResponseWithPagination<List<EmployeeResponse>> getAllEmployees(
         int page, 
@@ -24,4 +27,6 @@ public interface EmployeeService {
     );
 
     EmployeeResponse getEmployeeById(Long employeeId);
+
+    long countEmployees();
 } 

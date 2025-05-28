@@ -94,8 +94,6 @@ const PaginationComponent: React.FC<PaginationProps> = ({
     });
   };
 
-  console.log(currentPage, totalPage);
-
   return (
     <Pagination className="my-4">
       <PaginationContent>

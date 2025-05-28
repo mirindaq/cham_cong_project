@@ -22,6 +22,7 @@ import LeaveBalancePage from "./pages/admin/LeaveBalancePage"
 import AdminProfile from "./pages/admin/AdminProfile"
 import UsersPage from "./pages/admin/Users"
 import ChangePasswordFirstLogin from "./pages/ChangePasswordFirstLogin"
+import AttendancePage from "./pages/admin/Attendance"
 
 function App() {
   return (
@@ -112,6 +113,14 @@ function App() {
                 <UsersPage />
               </ProtectedRoute>
             } 
+          />
+          <Route 
+            path="/admin/attendances" 
+            element={
+              <ProtectedRoute allowedRoles={["ADMIN"]}>
+                <AttendancePage />
+              </ProtectedRoute>
+            }
           />
           <Route 
             path="/admin/departments" 

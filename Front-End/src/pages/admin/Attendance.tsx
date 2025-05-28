@@ -34,34 +34,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { attendanceApi } from "@/services/attendance.service";
 import { useSearchParams } from "react-router";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import type { Attendance } from "@/types/attendance.type";
+import { attendanceApi } from "@/services/attendance.service";
 
-interface Attendance {
-  id: number;
-  checkInTime: string;
-  checkOutTime: string;
-  totalHours: number;
-  lateMinutes: number;
-  edited: boolean;
-  editedBy: string;
-  locked: boolean;
-  employee: {
-    id: number;
-    fullName: string;
-  };
-  workShiftAssignment: {
-    id: number;
-    name: string;
-  };
-  location: {
-    id: number;
-    name: string;
-  };
-  status: string;
-}
 
 function AttendancePage() {
   const [loading, setLoading] = useState(false);
@@ -95,6 +73,7 @@ function AttendancePage() {
     const loadAttendances = async () => {
       setLoading(true);
       try {
+
         const response = await attendanceApi.getAllAttendances(searchParams);
         setAttendances(response.data);
       } catch (error) {
@@ -126,8 +105,8 @@ function AttendancePage() {
   const getStatusBadge = (status: string) => {
     const statusMap: { [key: string]: { label: string; className: string } } = {
       PRESENT: { label: "Có mặt", className: "bg-green-500" },
-      ABSENT: { label: "Vắng mặt", className: "bg-red-500" },
       LATE: { label: "Đi muộn", className: "bg-yellow-500" },
+      LEAVE: { label: "Nghỉ phép", className: "bg-blue-500" },
     };
 
     const statusInfo = statusMap[status] || { label: status, className: "bg-gray-500" };
@@ -179,9 +158,8 @@ function AttendancePage() {
               <SelectContent>
                 <SelectItem value="all">Tất cả trạng thái</SelectItem>
                 <SelectItem value="PRESENT">Có mặt</SelectItem>
-                <SelectItem value="ABSENT">Vắng mặt</SelectItem>
                 <SelectItem value="LATE">Đi muộn</SelectItem>
-                <SelectItem value="HALF_DAY">Nửa ngày</SelectItem>
+                <SelectItem value="LEAVE">Nghỉ phép</SelectItem>
               </SelectContent>
             </Select>
 
@@ -195,11 +173,10 @@ function AttendancePage() {
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="p-2 text-left font-medium">Nhân viên</th>
+                  <th className="p-2 text-left font-medium">Phòng ban</th>
                   <th className="p-2 text-left font-medium">Ngày</th>
                   <th className="p-2 text-left font-medium">Giờ vào</th>
                   <th className="p-2 text-left font-medium">Giờ ra</th>
-                  <th className="p-2 text-left font-medium">Tổng giờ</th>
-                  <th className="p-2 text-left font-medium">Đi muộn</th>
                   <th className="p-2 text-left font-medium">Ca làm</th>
                   <th className="p-2 text-left font-medium">Vị trí</th>
                   <th className="p-2 text-left font-medium">Trạng thái</th>
@@ -209,7 +186,7 @@ function AttendancePage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={10} className="p-4 text-center">
+                    <td colSpan={9} className="p-4 text-center">
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
                       </div>
@@ -217,33 +194,28 @@ function AttendancePage() {
                   </tr>
                 ) : attendances?.length > 0 ? (
                   attendances.map((attendance) => (
-                    <tr key={attendance.id} className="border-b">
-                      <td className="p-2">{attendance.employee.fullName}</td>
+                    <tr key={attendance.attendanceId} className="border-b">
+                      <td className="p-2">{attendance.workShifts.employeeName}</td>
+                      <td className="p-2">{attendance.workShifts.employeeDepartmentName}</td>
                       <td className="p-2">
-                        {format(new Date(attendance.checkInTime), "dd/MM/yyyy", {
+                        {format(new Date(attendance.date), "dd/MM/yyyy", {
                           locale: vi,
                         })}
                       </td>
                       <td className="p-2">
-                        {format(new Date(attendance.checkInTime), "HH:mm", {
+                        {format(new Date(attendance.checkIn), "HH:mm", {
                           locale: vi,
                         })}
                       </td>
                       <td className="p-2">
-                        {attendance.checkOutTime
-                          ? format(new Date(attendance.checkOutTime), "HH:mm", {
-                              locale: vi,
-                            })
+                        {attendance.checkOut
+                          ? format(new Date(attendance.checkOut), "HH:mm", {
+                            locale: vi,
+                          })
                           : "-"}
                       </td>
-                      <td className="p-2">{attendance.totalHours.toFixed(1)}h</td>
-                      <td className="p-2">
-                        {attendance.lateMinutes > 0
-                          ? `${attendance.lateMinutes} phút`
-                          : "-"}
-                      </td>
-                      <td className="p-2">{attendance.workShiftAssignment.name}</td>
-                      <td className="p-2">{attendance.location.name}</td>
+                      <td className="p-2">{attendance.workShifts.workShift.name}</td>
+                      <td className="p-2">{attendance.locationName}</td>
                       <td className="p-2">{getStatusBadge(attendance.status)}</td>
                       <td className="p-2">
                         <DropdownMenu>
@@ -254,30 +226,13 @@ function AttendancePage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {!attendance.locked && (
-                              <DropdownMenuItem>
-                                <button
-                                  className="flex"
-                                  onClick={() => handleOpenEditDialog(attendance)}
-                                >
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Chỉnh sửa
-                                </button>
-                              </DropdownMenuItem>
-                            )}
                             <DropdownMenuItem>
-                              <button className="flex">
-                                {attendance.locked ? (
-                                  <>
-                                    <Unlock className="mr-2 h-4 w-4" />
-                                    Mở khóa
-                                  </>
-                                ) : (
-                                  <>
-                                    <Lock className="mr-2 h-4 w-4" />
-                                    Khóa
-                                  </>
-                                )}
+                              <button
+                                className="flex"
+                                onClick={() => handleOpenEditDialog(attendance)}
+                              >
+                                <Edit className="mr-2 h-4 w-4" />
+                                Chỉnh sửa
                               </button>
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -287,7 +242,7 @@ function AttendancePage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={10} className="p-4 text-center text-muted-foreground">
+                    <td colSpan={9} className="p-4 text-center text-muted-foreground">
                       Không có dữ liệu chấm công.
                     </td>
                   </tr>
@@ -321,7 +276,7 @@ function AttendancePage() {
                 id="checkInTime"
                 type="datetime-local"
                 className="col-span-3"
-                defaultValue={selectedAttendance?.checkInTime}
+                defaultValue={selectedAttendance?.checkIn}
               />
             </div>
 
@@ -333,7 +288,7 @@ function AttendancePage() {
                 id="checkOutTime"
                 type="datetime-local"
                 className="col-span-3"
-                defaultValue={selectedAttendance?.checkOutTime}
+                defaultValue={selectedAttendance?.checkOut}
               />
             </div>
 
@@ -347,23 +302,10 @@ function AttendancePage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PRESENT">Có mặt</SelectItem>
-                  <SelectItem value="ABSENT">Vắng mặt</SelectItem>
                   <SelectItem value="LATE">Đi muộn</SelectItem>
-                  <SelectItem value="HALF_DAY">Nửa ngày</SelectItem>
+                  <SelectItem value="LEAVE">Nghỉ phép</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="col-span-2 grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="lateMinutes" className="text-right">
-                Số phút đi muộn
-              </Label>
-              <Input
-                id="lateMinutes"
-                type="number"
-                className="col-span-3"
-                defaultValue={selectedAttendance?.lateMinutes}
-              />
             </div>
 
             <div className="col-span-2 text-right mt-4">

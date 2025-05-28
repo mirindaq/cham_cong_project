@@ -1,5 +1,3 @@
-import type { User } from "./user.type";
-
 export type WorkShift = {
   id: number;
   name: string;
@@ -9,7 +7,7 @@ export type WorkShift = {
 
 export type WorkShiftAssignment = {
   id: number;
-  dateAssign: string; // Could also be Date type
+  dateAssign: string;
   workShift: WorkShift;
   employeeName: string;
   employeeDepartmentName: string;

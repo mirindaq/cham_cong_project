@@ -16,4 +16,10 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     List<Attendance> findAllByEmployeeAndMonthAndYear(Long employeeId, Long month, Long year);
 
     Optional<Attendance> findByIdAndEmployee_Id(Long id, Long employeeId);
+
+    @Query("SELECT a FROM Attendance a " +
+           "WHERE a.checkInTime IS NOT NULL OR a.checkOutTime IS NOT NULL " +
+           "ORDER BY COALESCE(a.checkOutTime, a.checkInTime) DESC " +
+           "LIMIT 3")
+    List<Attendance> findRecentCheckers();
 }

@@ -110,7 +110,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
         </div>
       </header>
       <div className="flex flex-1">
-        <aside className="hidden w-64 border-r bg-muted/40 lg:block">
+        <aside className="hidden w-64 border-r bg-muted/40 lg:block sticky top-16 h-[calc(100vh-4rem)]">
           <nav className="flex flex-col gap-2 p-4">
             {navigation.map((item) => (
               <Link

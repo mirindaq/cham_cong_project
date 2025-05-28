@@ -23,12 +23,24 @@ public class LeaveRequestController {
 
     @GetMapping
     public ResponseEntity<ResponseSuccess<ResponseWithPagination<List<LeaveRequestResponse>>>> getAllLeaveRequests(
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(new ResponseSuccess<>(
                 HttpStatus.OK,
                 "Get all leave requests success",
                 leaveRequestService.getAllLeaveRequests(page, size)
+        ));
+    }
+
+    @GetMapping("/employee/{employeeId}")
+    public ResponseEntity<ResponseSuccess<ResponseWithPagination<List<LeaveRequestResponse>>>> getAllLeaveRequestsByEmployee(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @PathVariable Long employeeId) {
+        return ResponseEntity.ok(new ResponseSuccess<>(
+                HttpStatus.OK,
+                "Get all leave requests success",
+                leaveRequestService.getAllLeaveRequestsByEmployee(page, size, employeeId)
         ));
     }
 
@@ -58,6 +70,15 @@ public class LeaveRequestController {
                 HttpStatus.OK,
                 "Reject leave request success",
                 null
+        ));
+    }
+
+    @GetMapping("/pending")
+    public ResponseEntity<ResponseSuccess<List<LeaveRequestResponse>>> getPendingLeaveRequests() {
+        return ResponseEntity.ok(new ResponseSuccess<>(
+                HttpStatus.OK,
+                "Get pending leave requests success",
+                leaveRequestService.getPendingLeaveRequests()
         ));
     }
 }

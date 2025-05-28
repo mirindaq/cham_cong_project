@@ -14,7 +14,7 @@ import { AdminLayout } from "@/components/admin-layout"
 function AdminProfile() {
   const [loading, setLoading] = useState(true)
   const [profileData, setProfileData] = useState({
-    name: "",
+    fullName: "",
     email: "",
     phone: "",
     department: "",
@@ -27,7 +27,7 @@ function AdminProfile() {
   })
 
   const [passwordData, setPasswordData] = useState({
-    employeeId: "",
+    username: "",
     oldPassword: "",
     newPassword: "",
     confirmPassword: "",
@@ -41,7 +41,7 @@ function AdminProfile() {
         const response = await userApi.getProfile(user.id);
         const userData = response.data;
         setProfileData({
-          name: userData.fullName,
+          fullName: userData.fullName,
           email: userData.email,
           phone: userData.phone,
           department: userData.departmentName,
@@ -55,10 +55,10 @@ function AdminProfile() {
 
         setPasswordData(prev => ({
           ...prev,
-          employeeId: userData.id.toString()
+          username: userData.email
         }));
       } catch (error: any) {
-        toast.error(error.response.data.message);
+        toast.error(error.response?.data?.message || "Có lỗi xảy ra khi tải thông tin");
       } finally {
         setLoading(false)
       }
@@ -76,16 +76,26 @@ function AdminProfile() {
     setPasswordData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleProfileSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleProfileSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    alert("Cập nhật thông tin thành công!")
+    try {
+      const submitData = {
+        phone: profileData.phone,
+        address: profileData.address,
+        dob: profileData.dob,
+      }
+      await userApi.updateProfile(Number(profileData.employeeId), submitData);
+      toast.success("Cập nhật thông tin thành công!")
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Có lỗi xảy ra khi cập nhật thông tin")
+    }
   }
 
   const handlePasswordSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert("Mật khẩu mới không khớp!")
+      toast.error("Mật khẩu mới không khớp!")
       return
     }
 
@@ -94,13 +104,13 @@ function AdminProfile() {
 
       toast.success("Cập nhật mật khẩu thành công!")
       setPasswordData({
-        employeeId: "",
+        username: "",
         oldPassword: "",
         newPassword: "",
         confirmPassword: "",
       })
     } catch (error: any) {
-      toast.error(error.response.data.message)
+      toast.error(error.response?.data?.message || "Có lỗi xảy ra khi đổi mật khẩu")
     }
   }
 
@@ -119,16 +129,16 @@ function AdminProfile() {
       <div className="space-y-6">
         <div className="flex items-center gap-4">
           <Avatar className="h-20 w-20">
-            <AvatarImage src="/placeholder.svg?height=80&width=80" alt={profileData.name} />
+            <AvatarImage src="/placeholder.svg?height=80&width=80" alt={profileData.fullName} />
             <AvatarFallback>
-              {profileData.name
+              {profileData.fullName
                 .split(" ")
                 .map((n) => n[0])
                 .join("")}
             </AvatarFallback>
           </Avatar>
           <div>
-            <h1 className="text-2xl font-bold">{profileData.name}</h1>
+            <h1 className="text-2xl font-bold">{profileData.fullName}</h1>
             <p className="text-muted-foreground">
               {profileData.position} - {profileData.department}
             </p>
@@ -151,7 +161,7 @@ function AdminProfile() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Họ và tên</Label>
-                      <Input id="name" name="name" value={profileData.name} onChange={handleProfileChange} />
+                      <Input id="name" name="name" value={profileData.fullName} disabled onChange={handleProfileChange} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
@@ -160,6 +170,7 @@ function AdminProfile() {
                         name="email"
                         type="email"
                         value={profileData.email}
+                        disabled
                         onChange={handleProfileChange}
                       />
                     </div>
@@ -220,6 +231,7 @@ function AdminProfile() {
                   <div className="space-y-2">
                     <Label htmlFor="oldPassword">Mật khẩu hiện tại</Label>
                     <Input
+                      placeholder="Mật khẩu hiện tại"
                       id="oldPassword"
                       name="oldPassword"
                       type="password"
@@ -231,6 +243,7 @@ function AdminProfile() {
                   <div className="space-y-2">
                     <Label htmlFor="newPassword">Mật khẩu mới</Label>
                     <Input
+                      placeholder="Mật khẩu mới"
                       id="newPassword"
                       name="newPassword"
                       type="password"
@@ -242,6 +255,7 @@ function AdminProfile() {
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Xác nhận mật khẩu mới</Label>
                     <Input
+                      placeholder="Xác nhận mật khẩu mới"
                       id="confirmPassword"
                       name="confirmPassword"
                       type="password"

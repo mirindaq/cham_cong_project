@@ -3,6 +3,7 @@ package com.attendance.fpt.controller;
 
 import com.attendance.fpt.entity.Employee;
 import com.attendance.fpt.model.request.EmployeeAddRequest;
+import com.attendance.fpt.model.request.EmployeeProfileRequest;
 import com.attendance.fpt.model.response.EmployeeResponse;
 import com.attendance.fpt.model.response.ResponseSuccess;
 import com.attendance.fpt.model.response.ResponseWithPagination;
@@ -57,5 +58,22 @@ public class EmployeeController {
                 "Update employee success", employeeService.updateEmployee(employeeId, employeeAddRequest)
         ));
     }
+
+    @PutMapping("/update-profile/{employeeId}")
+    public ResponseEntity<ResponseSuccess<EmployeeResponse>> updateProfile(
+            @PathVariable Long employeeId,
+            @Valid @RequestBody EmployeeProfileRequest employeeProfileRequest) {
+        return ResponseEntity.ok(new ResponseSuccess<>(HttpStatus.OK,
+                "Update employee success", employeeService.updateProfile(employeeId, employeeProfileRequest)
+        ));
+    }
+
+    @GetMapping("/count")
+    public ResponseEntity<ResponseSuccess<Long>> getTotalEmployees() {
+
+        long count = employeeService.countEmployees();
+        return ResponseEntity.ok(new ResponseSuccess<>(HttpStatus.OK, "Get employee count success", count));
+    }
+
 
 }

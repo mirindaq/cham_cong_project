@@ -11,5 +11,8 @@ public interface AttendanceService {
     List<AttendanceWorkShiftResponse> getAttendanceAndShiftAssignmentByEmployeeId(Long employeeId, Long month, Long year) ;
 
     AttendanceWorkShiftResponse checkIn(CheckInRequest request);
-    AttendanceWorkShiftResponse checkOut(CheckOutRequest checkOutRequest    );
+    AttendanceWorkShiftResponse checkOut(CheckOutRequest checkOutRequest );
+
+    List<AttendanceWorkShiftResponse> getAllAttendances();
+    List<AttendanceWorkShiftResponse> getRecentCheckers();
 }

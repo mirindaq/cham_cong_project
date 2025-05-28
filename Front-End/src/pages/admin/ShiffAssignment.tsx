@@ -85,6 +85,9 @@ export default function ShiffAssignment() {
     from: undefined,
     to: undefined,
   });
+  // Thêm state cho tìm kiếm
+  const [shiftSearch, setShiftSearch] = useState("");
+  const [employeeSearch, setEmployeeSearch] = useState("");
   const [assignments, setAssignments] = useState<WorkShiftAssignment[]>([]);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [filters, setFilters] = useState({
@@ -642,7 +645,7 @@ export default function ShiffAssignment() {
               </div>
 
               {/* Chọn ca làm */}
-              <div>
+              <div className="space-y-2">
                 <Label>Chọn ca làm</Label>
                 <Popover>
                   <PopoverTrigger asChild>
@@ -652,41 +655,74 @@ export default function ShiffAssignment() {
                     >
                       {selectedShiftIds.length === 0
                         ? "Chọn ca làm"
-                        : shifts
-                          .filter((s) => selectedShiftIds.includes(s.id))
-                          .map((s) => s.name)
-                          .join(", ")}
+                        : `${selectedShiftIds.length} ca đã chọn`}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[500px]">
-                    <div className="flex flex-col gap-2">
-                      {shifts.map((shift) => (
-                        <label
-                          key={shift.id}
-                          className="flex items-center gap-2 cursor-pointer"
+                  <PopoverContent className="w-[500px] p-4">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 border rounded-md px-3 py-2">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="text-muted-foreground"
                         >
-                          <Checkbox
-                            checked={selectedShiftIds.includes(shift.id)}
-                            onCheckedChange={(checked) => {
-                              setSelectedShiftIds((prev) =>
-                                checked
-                                  ? [...prev, shift.id]
-                                  : prev.filter((id) => id !== shift.id)
-                              );
-                            }}
-                          />
-                          <span>
-                            {shift.name} ({shift.startTime}-{shift.endTime})
-                          </span>
-                        </label>
-                      ))}
+                          <circle cx="11" cy="11" r="8" />
+                          <path d="m21 21-4.3-4.3" />
+                        </svg>
+                        <input
+                          type="text"
+                          placeholder="Tìm kiếm ca làm..."
+                          className="flex-1 bg-transparent outline-none text-sm"
+                          value={shiftSearch}
+                          onChange={(e) => setShiftSearch(e.target.value)}
+                        />
+                      </div>
+                      <div className="max-h-[300px] overflow-y-auto space-y-2">
+                        {shifts
+                          .filter((shift) =>
+                            shift.name.toLowerCase().includes(shiftSearch.toLowerCase()) ||
+                            shift.startTime.toLowerCase().includes(shiftSearch.toLowerCase()) ||
+                            shift.endTime.toLowerCase().includes(shiftSearch.toLowerCase())
+                          )
+                          .map((shift) => (
+                            <label
+                              key={shift.id}
+                              className="flex items-start gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
+                            >
+                              <Checkbox
+                                checked={selectedShiftIds.includes(shift.id)}
+                                onCheckedChange={(checked) => {
+                                  setSelectedShiftIds((prev) =>
+                                    checked
+                                      ? [...prev, shift.id]
+                                      : prev.filter((id) => id !== shift.id)
+                                  );
+                                }}
+                                className="mt-1"
+                              />
+                              <div className="flex-1">
+                                <div className="font-medium">{shift.name}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {shift.startTime} - {shift.endTime}
+                                </div>
+                              </div>
+                            </label>
+                          ))}
+                      </div>
                     </div>
                   </PopoverContent>
                 </Popover>
               </div>
 
               {/* Chọn nhân viên */}
-              <div>
+              <div className="space-y-2">
                 <Label>Chọn nhân viên</Label>
                 <Popover>
                   <PopoverTrigger asChild>
@@ -696,32 +732,66 @@ export default function ShiffAssignment() {
                     >
                       {selectedEmployeeIds.length === 0
                         ? "Chọn nhân viên"
-                        : users
-                          .filter((e) => selectedEmployeeIds.includes(e.id))
-                          .map((e) => e.fullName)
-                          .join(", ")}
+                        : `${selectedEmployeeIds.length} nhân viên đã chọn`}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[500px]">
-                    <div className="flex flex-col gap-2">
-                      {users?.map((emp) => (
-                        <label
-                          key={emp.id}
-                          className="flex items-center gap-2 cursor-pointer"
+                  <PopoverContent className="w-[500px] p-4">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 border rounded-md px-3 py-2">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="text-muted-foreground"
                         >
-                          <Checkbox
-                            checked={selectedEmployeeIds.includes(emp.id)}
-                            onCheckedChange={(checked) => {
-                              setSelectedEmployeeIds((prev) =>
-                                checked
-                                  ? [...prev, emp.id]
-                                  : prev.filter((id) => id !== emp.id)
-                              );
-                            }}
-                          />
-                          <span>{emp.fullName}</span>
-                        </label>
-                      ))}
+                          <circle cx="11" cy="11" r="8" />
+                          <path d="m21 21-4.3-4.3" />
+                        </svg>
+                        <input
+                          type="text"
+                          placeholder="Tìm kiếm nhân viên..."
+                          className="flex-1 bg-transparent outline-none text-sm"
+                          value={employeeSearch}
+                          onChange={(e) => setEmployeeSearch(e.target.value)}
+                        />
+                      </div>
+                      <div className="max-h-[300px] overflow-y-auto space-y-2">
+                        {users
+                          ?.filter((emp) =>
+                            emp.fullName.toLowerCase().includes(employeeSearch.toLowerCase()) ||
+                            emp.email.toLowerCase().includes(employeeSearch.toLowerCase())
+                          )
+                          .map((emp) => (
+                            <label
+                              key={emp.id}
+                              className="flex items-start gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
+                            >
+                              <Checkbox
+                                checked={selectedEmployeeIds.includes(emp.id)}
+                                onCheckedChange={(checked) => {
+                                  setSelectedEmployeeIds((prev) =>
+                                    checked
+                                      ? [...prev, emp.id]
+                                      : prev.filter((id) => id !== emp.id)
+                                  );
+                                }}
+                                className="mt-1"
+                              />
+                              <div className="flex-1">
+                                <div className="font-medium">{emp.fullName}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {emp.email}
+                                </div>
+                              </div>
+                            </label>
+                          ))}
+                      </div>
                     </div>
                   </PopoverContent>
                 </Popover>

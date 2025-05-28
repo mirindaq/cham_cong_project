@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import React, { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -8,7 +8,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -16,26 +16,29 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { AdminLayout } from '@/components/admin-layout'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Trash, Calendar, Users, Search, Filter } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { AdminLayout } from "@/components/admin-layout";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-
-interface LeaveType {
-  id: number;
-  name: string;
-  maxDayPerYear: number;
-}
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Edit, Trash, Calendar, Users, Search } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { leaveTypeApi } from "@/services/leaveType.service";
+import { toast } from "sonner";
+import type { LeaveType } from "@/types/leaveRequest.type";
 
 interface LeaveBalance {
   id: number;
@@ -51,130 +54,82 @@ interface LeaveBalance {
   leaveType: LeaveType;
 }
 
-// Fake data
-const fakeLeaveTypes: LeaveType[] = [
-  { id: 1, name: "Nghỉ phép năm", maxDayPerYear: 12 },
-  { id: 2, name: "Nghỉ ốm", maxDayPerYear: 30 },
-  { id: 3, name: "Nghỉ thai sản", maxDayPerYear: 180 },
-  { id: 4, name: "Nghỉ việc riêng", maxDayPerYear: 3 },
-];
-
-const fakeLeaveBalances: LeaveBalance[] = [
-  {
-    id: 1,
-    usedDay: 5,
-    year: 2024,
-    remainingDay: 7,
-    employee: { 
-      id: 1, 
-      name: "Nguyễn Văn A",
-      department: "Phòng Kỹ thuật",
-      position: "Kỹ sư"
-    },
-    leaveType: fakeLeaveTypes[0]
-  },
-  {
-    id: 2,
-    usedDay: 2,
-    year: 2024,
-    remainingDay: 28,
-    employee: { 
-      id: 1, 
-      name: "Nguyễn Văn A",
-      department: "Phòng Kỹ thuật",
-      position: "Kỹ sư"
-    },
-    leaveType: fakeLeaveTypes[1]
-  },
-  {
-    id: 3,
-    usedDay: 8,
-    year: 2024,
-    remainingDay: 4,
-    employee: { 
-      id: 2, 
-      name: "Trần Thị B",
-      department: "Phòng Nhân sự",
-      position: "Chuyên viên"
-    },
-    leaveType: fakeLeaveTypes[0]
-  },
-  {
-    id: 4,
-    usedDay: 1,
-    year: 2024,
-    remainingDay: 2,
-    employee: { 
-      id: 2, 
-      name: "Trần Thị B",
-      department: "Phòng Nhân sự",
-      position: "Chuyên viên"
-    },
-    leaveType: fakeLeaveTypes[3]
-  },
-  {
-    id: 5,
-    usedDay: 0,
-    year: 2024,
-    remainingDay: 12,
-    employee: { 
-      id: 3, 
-      name: "Lê Văn C",
-      department: "Phòng Kinh doanh",
-      position: "Trưởng phòng"
-    },
-    leaveType: fakeLeaveTypes[0]
-  }
-];
-
 export default function LeaveBalancePage() {
-  const [showAddLeaveTypeDialog, setShowAddLeaveTypeDialog] = useState(false)
-  const [showEditLeaveTypeDialog, setShowEditLeaveTypeDialog] = useState(false)
-  const [editLeaveTypeId, setEditLeaveTypeId] = useState<number | null>(null)
-  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>(fakeLeaveTypes)
-  const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>(fakeLeaveBalances)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedYear, setSelectedYear] = useState("2024")
-  const [selectedLeaveType, setSelectedLeaveType] = useState("all")
-  const [selectedDepartment, setSelectedDepartment] = useState("all")
+  const [showAddLeaveTypeDialog, setShowAddLeaveTypeDialog] = useState(false);
+  const [showEditLeaveTypeDialog, setShowEditLeaveTypeDialog] = useState(false);
+  const [editLeaveTypeId, setEditLeaveTypeId] = useState<number | null>(null);
+  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
+  const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedYear, setSelectedYear] = useState("2024");
+  const [selectedLeaveType, setSelectedLeaveType] = useState("all");
+  const [selectedDepartment, setSelectedDepartment] = useState("all");
+  const [loading, setLoading] = useState<boolean>(false);
 
   const [newLeaveType, setNewLeaveType] = useState({
-    name: '',
-    maxDayPerYear: 0
+    name: "",
+    maxDayPerYear: 0,
   });
 
+  useEffect(() => {
+    const loadLeaveTypes = async () => {
+      setLoading(true);
+      try {
+        const response = await leaveTypeApi.getAllLeaveTypes();
+        setLeaveTypes(response);
+      } catch (error) {
+        console.error(error);
+        toast.error("Có lỗi xảy ra khi tải dữ liệu");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadLeaveTypes();
+  }, []);
+
   // Get unique departments
-  const departments = Array.from(new Set(leaveBalances.map(balance => balance.employee.department)));
+  const departments = Array.from(
+    new Set(leaveBalances.map((balance) => balance.employee.department))
+  );
 
   // Group leave balances by employee
   const employeeBalances = leaveBalances.reduce((acc, balance) => {
     if (!acc[balance.employee.id]) {
       acc[balance.employee.id] = {
         employee: balance.employee,
-        balances: []
+        balances: [],
       };
     }
     acc[balance.employee.id].balances.push(balance);
     return acc;
   }, {} as Record<number, { employee: { id: number; name: string; department?: string; position?: string }; balances: LeaveBalance[] }>);
 
-  const handleAddLeaveType = () => {
+  const handleAddLeaveType = async () => {
     const newType: LeaveType = {
       id: leaveTypes.length + 1,
       name: newLeaveType.name,
-      maxDayPerYear: newLeaveType.maxDayPerYear
+      maxDayPerYear: newLeaveType.maxDayPerYear,
     };
-    setLeaveTypes([...leaveTypes, newType]);
-    setNewLeaveType({ name: '', maxDayPerYear: 0 });
-    setShowAddLeaveTypeDialog(false);
+    console.log(newType);
+
+    try {
+      await leaveTypeApi.addLeaveType(newLeaveType);
+      toast.success("Thêm loại nghỉ phép thành công");
+      setLeaveTypes([...leaveTypes, newType]);
+      setNewLeaveType({ name: "", maxDayPerYear: 0 });
+      setShowAddLeaveTypeDialog(false);
+    } catch (error) {
+      console.error("Lỗi khi thêm loại nghỉ phép:", error);
+      toast.error("Đã xảy ra lỗi khi thêm loại nghỉ phép. Vui lòng thử lại.");
+    }
   };
 
   const handleEditLeaveType = (id: number) => {
-    const typeToEdit = leaveTypes.find(type => type.id === id);
+    const typeToEdit = leaveTypes.find((type) => type.id === id);
     if (typeToEdit) {
       setNewLeaveType({
         name: typeToEdit.name,
-        maxDayPerYear: typeToEdit.maxDayPerYear
+        maxDayPerYear: typeToEdit.maxDayPerYear,
       });
       setEditLeaveTypeId(id);
       setShowEditLeaveTypeDialog(true);
@@ -183,20 +138,26 @@ export default function LeaveBalancePage() {
 
   const handleDeleteLeaveType = (id: number) => {
     if (confirm("Bạn có chắc chắn muốn xóa loại nghỉ phép này không?")) {
-      setLeaveTypes(leaveTypes.filter(type => type.id !== id));
+      setLeaveTypes(leaveTypes.filter((type) => type.id !== id));
     }
   };
 
   const resetLeaveTypeForm = () => {
-    setNewLeaveType({ name: '', maxDayPerYear: 0 });
+    setNewLeaveType({ name: "", maxDayPerYear: 0 });
     setEditLeaveTypeId(null);
   };
 
-  const filteredBalances = Object.values(employeeBalances).filter(({ employee }) => {
-    const matchesSearch = employee.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesDepartment = selectedDepartment === "all" || employee.department === selectedDepartment;
-    return matchesSearch && matchesDepartment;
-  });
+  const filteredBalances = Object.values(employeeBalances).filter(
+    ({ employee }) => {
+      const matchesSearch = employee.name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      const matchesDepartment =
+        selectedDepartment === "all" ||
+        employee.department === selectedDepartment;
+      return matchesSearch && matchesDepartment;
+    }
+  );
 
   return (
     <AdminLayout>
@@ -205,18 +166,26 @@ export default function LeaveBalancePage() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <CardTitle>Quản lý nghỉ phép</CardTitle>
-              <CardDescription>Quản lý các loại nghỉ phép và số ngày nghỉ của nhân viên</CardDescription>
+              <CardDescription>
+                Quản lý các loại nghỉ phép và số ngày nghỉ của nhân viên
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="employees" className="space-y-4">
             <TabsList>
-              <TabsTrigger value="employees" className="flex items-center gap-2">
+              <TabsTrigger
+                value="employees"
+                className="flex items-center gap-2"
+              >
                 <Users className="h-4 w-4" />
                 Danh sách nhân viên
               </TabsTrigger>
-              <TabsTrigger value="leave-types" className="flex items-center gap-2">
+              <TabsTrigger
+                value="leave-types"
+                className="flex items-center gap-2"
+              >
                 <Calendar className="h-4 w-4" />
                 Quản lý loại nghỉ phép
               </TabsTrigger>
@@ -243,13 +212,16 @@ export default function LeaveBalancePage() {
                       <SelectItem value="2023">2023</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                  <Select
+                    value={selectedDepartment}
+                    onValueChange={setSelectedDepartment}
+                  >
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Phòng ban" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Tất cả phòng ban</SelectItem>
-                      {departments.map(dept => (
+                      {departments.map((dept) => (
                         <SelectItem key={dept} value={dept || ""}>
                           {dept}
                         </SelectItem>
@@ -259,50 +231,66 @@ export default function LeaveBalancePage() {
                 </div>
 
                 <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nhân viên</TableHead>
-                        <TableHead>Phòng ban</TableHead>
-                        <TableHead>Chức vụ</TableHead>
-                        {leaveTypes.map(type => (
-                          <TableHead key={type.id} className="text-center">
-                            {type.name}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredBalances.map(({ employee, balances }) => (
-                        <TableRow key={employee.id}>
-                          <TableCell className="font-medium">{employee.name}</TableCell>
-                          <TableCell>{employee.department}</TableCell>
-                          <TableCell>{employee.position}</TableCell>
-                          {leaveTypes.map(type => {
-                            const balance = balances.find(b => b.leaveType.id === type.id);
-                            return (
-                              <TableCell key={type.id} className="text-center">
-                                {balance ? (
-                                  <div className="flex flex-col items-center gap-1">
-                                    <Badge variant={balance.remainingDay > 0 ? "default" : "destructive"}>
-                                      {balance.remainingDay}/{type.maxDayPerYear}
-                                    </Badge>
-                                    <span className="text-xs text-muted-foreground">
-                                      Đã dùng: {balance.usedDay}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <Badge variant="outline">
-                                    {type.maxDayPerYear}/{type.maxDayPerYear}
-                                  </Badge>
-                                )}
-                              </TableCell>
-                            );
-                          })}
+                  {loading && (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nhân viên</TableHead>
+                          <TableHead>Phòng ban</TableHead>
+                          <TableHead>Chức vụ</TableHead>
+                          {leaveTypes.map((type) => (
+                            <TableHead key={type.id} className="text-center">
+                              {type.name}
+                            </TableHead>
+                          ))}
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredBalances.map(({ employee, balances }) => (
+                          <TableRow key={employee.id}>
+                            <TableCell className="font-medium">
+                              {employee.name}
+                            </TableCell>
+                            <TableCell>{employee.department}</TableCell>
+                            <TableCell>{employee.position}</TableCell>
+                            {leaveTypes.map((type) => {
+                              const balance = balances.find(
+                                (b) => b.leaveType.id === type.id
+                              );
+                              return (
+                                <TableCell
+                                  key={type.id}
+                                  className="text-center"
+                                >
+                                  {balance ? (
+                                    <div className="flex flex-col items-center gap-1">
+                                      <Badge
+                                        variant={
+                                          balance.remainingDay > 0
+                                            ? "default"
+                                            : "destructive"
+                                        }
+                                      >
+                                        {balance.remainingDay}/
+                                        {type.maxDayPerYear}
+                                      </Badge>
+                                      <span className="text-xs text-muted-foreground">
+                                        Đã dùng: {balance.usedDay}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <Badge variant="outline">
+                                      {type.maxDayPerYear}/{type.maxDayPerYear}
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                              );
+                            })}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
                 </div>
               </div>
             </TabsContent>
@@ -331,7 +319,11 @@ export default function LeaveBalancePage() {
                           <TableCell>{type.name}</TableCell>
                           <TableCell>{type.maxDayPerYear} ngày</TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="sm" onClick={() => handleEditLeaveType(type.id)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditLeaveType(type.id)}
+                            >
                               <Edit className="mr-2 h-4 w-4" />
                               Sửa
                             </Button>
@@ -357,11 +349,16 @@ export default function LeaveBalancePage() {
       </Card>
 
       {/* Dialog thêm loại nghỉ phép mới */}
-      <Dialog open={showAddLeaveTypeDialog} onOpenChange={setShowAddLeaveTypeDialog}>
+      <Dialog
+        open={showAddLeaveTypeDialog}
+        onOpenChange={setShowAddLeaveTypeDialog}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Thêm loại nghỉ phép mới</DialogTitle>
-            <DialogDescription>Thêm một loại nghỉ phép mới vào hệ thống.</DialogDescription>
+            <DialogDescription>
+              Thêm một loại nghỉ phép mới vào hệ thống.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-4 items-center gap-4">
@@ -372,7 +369,9 @@ export default function LeaveBalancePage() {
                 id="name"
                 className="col-span-3"
                 value={newLeaveType.name}
-                onChange={(e) => setNewLeaveType({ ...newLeaveType, name: e.target.value })}
+                onChange={(e) =>
+                  setNewLeaveType({ ...newLeaveType, name: e.target.value })
+                }
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -384,15 +383,24 @@ export default function LeaveBalancePage() {
                 type="number"
                 className="col-span-3"
                 value={newLeaveType.maxDayPerYear}
-                onChange={(e) => setNewLeaveType({ ...newLeaveType, maxDayPerYear: parseInt(e.target.value) })}
+                onChange={(e) =>
+                  setNewLeaveType({
+                    ...newLeaveType,
+                    maxDayPerYear: parseInt(e.target.value),
+                  })
+                }
               />
             </div>
           </div>
           <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={() => {
-              setShowAddLeaveTypeDialog(false)
-              resetLeaveTypeForm()
-            }}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowAddLeaveTypeDialog(false);
+                resetLeaveTypeForm();
+              }}
+            >
               Hủy
             </Button>
             <Button onClick={handleAddLeaveType}>Thêm</Button>
@@ -401,11 +409,16 @@ export default function LeaveBalancePage() {
       </Dialog>
 
       {/* Dialog chỉnh sửa loại nghỉ phép */}
-      <Dialog open={showEditLeaveTypeDialog} onOpenChange={setShowEditLeaveTypeDialog}>
+      <Dialog
+        open={showEditLeaveTypeDialog}
+        onOpenChange={setShowEditLeaveTypeDialog}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Chỉnh sửa loại nghỉ phép</DialogTitle>
-            <DialogDescription>Cập nhật thông tin loại nghỉ phép.</DialogDescription>
+            <DialogDescription>
+              Cập nhật thông tin loại nghỉ phép.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-4 items-center gap-4">
@@ -416,7 +429,9 @@ export default function LeaveBalancePage() {
                 id="edit-name"
                 className="col-span-3"
                 value={newLeaveType.name}
-                onChange={(e) => setNewLeaveType({ ...newLeaveType, name: e.target.value })}
+                onChange={(e) =>
+                  setNewLeaveType({ ...newLeaveType, name: e.target.value })
+                }
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -428,34 +443,49 @@ export default function LeaveBalancePage() {
                 type="number"
                 className="col-span-3"
                 value={newLeaveType.maxDayPerYear}
-                onChange={(e) => setNewLeaveType({ ...newLeaveType, maxDayPerYear: parseInt(e.target.value) })}
+                onChange={(e) =>
+                  setNewLeaveType({
+                    ...newLeaveType,
+                    maxDayPerYear: parseInt(e.target.value),
+                  })
+                }
               />
             </div>
           </div>
           <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={() => {
-              setShowEditLeaveTypeDialog(false)
-              resetLeaveTypeForm()
-            }}>
-              Hủy
-            </Button>
-            <Button onClick={() => {
-              if (editLeaveTypeId) {
-                const updatedTypes = leaveTypes.map(type =>
-                  type.id === editLeaveTypeId
-                    ? { ...type, name: newLeaveType.name, maxDayPerYear: newLeaveType.maxDayPerYear }
-                    : type
-                );
-                setLeaveTypes(updatedTypes);
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
                 setShowEditLeaveTypeDialog(false);
                 resetLeaveTypeForm();
-              }
-            }}>
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={() => {
+                if (editLeaveTypeId) {
+                  const updatedTypes = leaveTypes.map((type) =>
+                    type.id === editLeaveTypeId
+                      ? {
+                          ...type,
+                          name: newLeaveType.name,
+                          maxDayPerYear: newLeaveType.maxDayPerYear,
+                        }
+                      : type
+                  );
+                  setLeaveTypes(updatedTypes);
+                  setShowEditLeaveTypeDialog(false);
+                  resetLeaveTypeForm();
+                }
+              }}
+            >
               Lưu thay đổi
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </AdminLayout>
-  )
+  );
 }

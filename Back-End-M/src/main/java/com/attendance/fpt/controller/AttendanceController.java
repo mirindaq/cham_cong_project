@@ -19,6 +19,23 @@ public class AttendanceController {
 
     private final AttendanceService attendanceService;
 
+    @GetMapping("")
+    public ResponseEntity<ResponseSuccess<List<AttendanceWorkShiftResponse>>> getAllAttendance() {
+        return ResponseEntity.ok(new ResponseSuccess<>(
+                HttpStatus.OK,
+                "Get all attendance success",
+                attendanceService.getAllAttendances()
+        ));
+    }
+
+    @GetMapping("/recent-checker")
+    public ResponseEntity<ResponseSuccess<List<AttendanceWorkShiftResponse>>> getRecentCheckers() {
+        return ResponseEntity.ok(new ResponseSuccess<>(
+                HttpStatus.OK,
+                "Get recent checkers success",
+                attendanceService.getRecentCheckers()
+        ));
+    }
 
     @GetMapping("/employee/{employeeId}")
     public ResponseEntity<ResponseSuccess<List<AttendanceWorkShiftResponse>>> getAssignmentsByEmployeeAndDateId(
