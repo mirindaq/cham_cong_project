@@ -129,8 +129,6 @@ export default function ApprovalsPage() {
     alert(`Đã từ chối ${selectedRequestType?.toLowerCase()}!`);
   };
 
-  if (loading) return <>Đang tải</>;
-
   const getStatusBadge = (status: ComplaintStatus | LeaveRequestStatus) => {
     switch (status) {
       case LeaveRequestStatus.APPROVED:
@@ -221,7 +219,15 @@ export default function ApprovalsPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {leaveRequests?.map((request) => (
+                          {loading ? (
+                            <tr>
+                              <td colSpan={9} className="p-4 text-center">
+                                <div className="flex items-center justify-center">
+                                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : leaveRequests?.map((request) => (
                             <tr key={request.id} className="border-b">
                               <td className="p-2 text-left font-medium">
                                 {request.employeeName}
@@ -344,7 +350,15 @@ export default function ApprovalsPage() {
                         </thead>
 
                         <tbody>
-                          {complaints.map((complaint) => (
+                          {loading ? (
+                            <tr>
+                              <td colSpan={10} className="p-4 text-center">
+                                <div className="flex items-center justify-center">
+                                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : complaints.map((complaint) => (
                             <tr key={complaint.id} className="border-b">
                               <td className="p-2">
                                 {complaint.employeeFullName}

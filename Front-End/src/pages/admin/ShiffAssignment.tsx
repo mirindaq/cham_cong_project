@@ -65,6 +65,9 @@ import { shiftAssignmentApi } from "@/services/shiftAssignment.service";
 import { userApi } from "@/services/user.service";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
+import { departmentApi } from "@/services/department.service";
+import type { Department } from "@/types/department.type";
+import { useSearchParams } from "react-router";
 
 export default function ShiffAssignment() {
   const [shifts, setShifts] = useState<WorkShift[]>([]);
@@ -75,6 +78,8 @@ export default function ShiffAssignment() {
     endTime: "",
   });
   const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCalendarLoading, setIsCalendarLoading] = useState(false);
   // State cho phân công
   const [selectedShiftIds, setSelectedShiftIds] = useState<number[]>([]);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<number[]>([]);
@@ -89,6 +94,7 @@ export default function ShiffAssignment() {
   const [shiftSearch, setShiftSearch] = useState("");
   const [employeeSearch, setEmployeeSearch] = useState("");
   const [assignments, setAssignments] = useState<WorkShiftAssignment[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [filters, setFilters] = useState({
     dateRange: {
@@ -100,31 +106,55 @@ export default function ShiffAssignment() {
     shift: null as number | null,
   });
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [tempMonth, setTempMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<"table" | "calendar">("calendar");
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
-    const fetchShifts = async () => {
-      const shifts = await shiftAssignmentApi.getAllShifts();
-      if (shifts) setShifts(shifts);
-    };
-    fetchShifts();
-  }, []);
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const [shiftsData, usersData, departmentsData] = await Promise.all([
+          shiftAssignmentApi.getAllShifts(),
+          userApi.getAllUsers({}),
+          departmentApi.getAllDepartments(),
+        ]);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      const users = await userApi.getAllUsers({});
-      if (users) setUsers(users.data);
+        if (shiftsData) setShifts(shiftsData);
+        if (usersData) setUsers(usersData.data);
+        if (departmentsData) setDepartments(departmentsData);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        toast.error("Có lỗi xảy ra khi tải dữ liệu");
+      } finally {
+        setIsLoading(false);
+      }
     };
-    fetchUsers();
+
+    fetchData();
   }, []);
 
   useEffect(() => {
     const fetchAssignments = async () => {
-      const assignments = await shiftAssignmentApi.getAllAssignments();
-      if (assignments) setAssignments(assignments);
+      try {
+        setIsCalendarLoading(true);
+        const assignments = await shiftAssignmentApi.getAllAssignments(
+          searchParams
+        );
+        if (assignments) {
+          setAssignments(assignments);
+        } else {
+          setAssignments([]);
+          toast.error("Không tìm thấy phân ca phù hợp.");
+        }
+      } catch (error) {
+        toast.error("Lỗi khi lấy dữ liệu phân ca.");
+      } finally {
+        setIsCalendarLoading(false);
+      }
     };
     fetchAssignments();
-  }, []);
+  }, [searchParams]);
 
   const handleAddShift = async () => {
     if (!newShift.name || !newShift.startTime || !newShift.endTime) return;
@@ -214,6 +244,31 @@ export default function ShiffAssignment() {
     }
   };
 
+  const handleFilter = async () => {
+    const newParams = new URLSearchParams();
+
+    setCurrentMonth(tempMonth);
+
+    if (tempMonth) {
+      newParams.set("month", (tempMonth.getMonth() + 1).toString());
+      newParams.set("year", tempMonth.getFullYear().toString());
+    }
+
+    if (filters.employee) {
+      newParams.set("employeeId", filters.employee.toString());
+    }
+
+    if (filters.department) {
+      newParams.set("departmentId", filters.department.toString());
+    }
+
+    if (filters.shift) {
+      newParams.set("workShiftId", filters.shift.toString());
+    }
+
+    setSearchParams(newParams);
+  };
+
   const renderCalendar = () => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
@@ -225,26 +280,20 @@ export default function ShiffAssignment() {
       );
     };
 
+    if (isCalendarLoading) {
+      return (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setCurrentMonth((prev) => subMonths(prev, 1))}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
+        <div className="flex items-center justify-center">
           <h2 className="text-xl font-semibold">
-            {format(currentMonth, "MMMM yyyy", { locale: vi })}
+            Tháng {format(currentMonth, "MM yyyy", { locale: vi })}
           </h2>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setCurrentMonth((prev) => addMonths(prev, 1))}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
         </div>
 
         <div className="grid grid-cols-7 gap-1">
@@ -306,9 +355,10 @@ export default function ShiffAssignment() {
                           }
                           className="h-4 w-4 hover:bg-destructive/10"
                         >
-                          {isAfter(new Date(assignment.dateAssign), new Date()) && (
-                            <Trash2 className="h-3 w-3 text-destructive" />
-                          )}
+                          {isAfter(
+                            new Date(assignment.dateAssign),
+                            new Date()
+                          ) && <Trash2 className="h-3 w-3 text-destructive" />}
                         </Button>
                       </div>
                     </div>
@@ -321,6 +371,16 @@ export default function ShiffAssignment() {
       </div>
     );
   };
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -415,15 +475,71 @@ export default function ShiffAssignment() {
               <CardContent>
                 {/* Bộ lọc và tìm kiếm */}
                 <div className="bg-muted/50 py-2 rounded-lg mb-6">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium">Tháng</Label>
+                      <Select
+                        value={format(tempMonth, "MM")}
+                        onValueChange={(value) => {
+                          const newDate = new Date(tempMonth);
+                          newDate.setMonth(parseInt(value) - 1);
+                          setTempMonth(newDate);
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Chọn tháng" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 12 }, (_, i) => (
+                            <SelectItem
+                              key={i + 1}
+                              value={(i + 1).toString().padStart(2, "0")}
+                            >
+                              Tháng {i + 1}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium">Năm</Label>
+                      <Select
+                        value={format(tempMonth, "yyyy")}
+                        onValueChange={(value) => {
+                          const newDate = new Date(tempMonth);
+                          newDate.setFullYear(parseInt(value));
+                          setTempMonth(newDate);
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Chọn năm" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 5 }, (_, i) => {
+                            const year = new Date().getFullYear() - 2 + i;
+                            return (
+                              <SelectItem key={year} value={year.toString()}>
+                                Năm {year}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     <div>
                       <Label className="text-sm font-medium">Nhân viên</Label>
                       <Select
-                        value={filters.employee?.toString()}
+                        value={
+                          filters.employee !== null
+                            ? filters.employee.toString()
+                            : "all"
+                        }
                         onValueChange={(value) =>
                           setFilters((prev) => ({
                             ...prev,
-                            employee: value ? Number(value) : null,
+                            employee: value === "all" ? null : Number(value),
                           }))
                         }
                       >
@@ -444,11 +560,15 @@ export default function ShiffAssignment() {
                     <div>
                       <Label className="text-sm font-medium">Phòng ban</Label>
                       <Select
-                        value={filters.department?.toString()}
+                        value={
+                          filters.department !== null
+                            ? filters.department.toString()
+                            : "all"
+                        }
                         onValueChange={(value) =>
                           setFilters((prev) => ({
                             ...prev,
-                            department: value ? Number(value) : null,
+                            department: value === "all" ? null : Number(value),
                           }))
                         }
                       >
@@ -457,7 +577,11 @@ export default function ShiffAssignment() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Tất cả phòng ban</SelectItem>
-                          {/* Thêm danh sách phòng ban ở đây */}
+                          {departments.map((dep) => (
+                            <SelectItem key={dep.id} value={dep.id.toString()}>
+                              {dep.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -465,11 +589,15 @@ export default function ShiffAssignment() {
                     <div>
                       <Label className="text-sm font-medium">Ca làm</Label>
                       <Select
-                        value={filters.shift?.toString()}
+                        value={
+                          filters.shift !== null
+                            ? filters.shift.toString()
+                            : "all"
+                        }
                         onValueChange={(value) =>
                           setFilters((prev) => ({
                             ...prev,
-                            shift: value ? Number(value) : null,
+                            shift: value === "all" ? null : Number(value),
                           }))
                         }
                       >
@@ -491,7 +619,12 @@ export default function ShiffAssignment() {
                     </div>
 
                     <div className="flex items-end">
-                      <Button className="w-full sm:w-auto" >Lọc</Button>
+                      <Button
+                        className="w-full sm:w-auto hover:cursor-pointer"
+                        onClick={() => handleFilter()}
+                      >
+                        Lọc
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -544,21 +677,24 @@ export default function ShiffAssignment() {
                               {assignment.workShift.endTime}
                             </TableCell>
                             <TableCell className="text-right">
-                              {isAfter(new Date(assignment.dateAssign), new Date()) && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    handleDeleteAssignment(
-                                      assignment.id,
-                                      assignment.employeeId
-                                    )
-                                  }
-                                  className="hover:bg-destructive/10"
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              )}
+                              {isAfter(
+                                new Date(assignment.dateAssign),
+                                new Date()
+                              ) && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() =>
+                                      handleDeleteAssignment(
+                                        assignment.id,
+                                        assignment.employeeId
+                                      )
+                                    }
+                                    className="hover:bg-destructive/10"
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                )}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -617,10 +753,19 @@ export default function ShiffAssignment() {
                     </Label>
                     <Input
                       type="date"
-                      value={selectedDateRange.from ? format(selectedDateRange.from, "yyyy-MM-dd") : ""}
+                      value={
+                        selectedDateRange.from
+                          ? format(selectedDateRange.from, "yyyy-MM-dd")
+                          : ""
+                      }
                       onChange={(e) => {
-                        const date = e.target.value ? new Date(e.target.value) : undefined;
-                        setSelectedDateRange(prev => ({...prev, from: date}));
+                        const date = e.target.value
+                          ? new Date(e.target.value)
+                          : undefined;
+                        setSelectedDateRange((prev) => ({
+                          ...prev,
+                          from: date,
+                        }));
                       }}
                       min={format(new Date(), "yyyy-MM-dd")}
                       className="w-full"
@@ -632,12 +777,22 @@ export default function ShiffAssignment() {
                     </Label>
                     <Input
                       type="date"
-                      value={selectedDateRange.to ? format(selectedDateRange.to, "yyyy-MM-dd") : ""}
+                      value={
+                        selectedDateRange.to
+                          ? format(selectedDateRange.to, "yyyy-MM-dd")
+                          : ""
+                      }
                       onChange={(e) => {
-                        const date = e.target.value ? new Date(e.target.value) : undefined;
-                        setSelectedDateRange(prev => ({...prev, to: date}));
+                        const date = e.target.value
+                          ? new Date(e.target.value)
+                          : undefined;
+                        setSelectedDateRange((prev) => ({ ...prev, to: date }));
                       }}
-                      min={selectedDateRange.from ? format(selectedDateRange.from, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd")}
+                      min={
+                        selectedDateRange.from
+                          ? format(selectedDateRange.from, "yyyy-MM-dd")
+                          : format(new Date(), "yyyy-MM-dd")
+                      }
                       className="w-full"
                     />
                   </div>
@@ -686,10 +841,17 @@ export default function ShiffAssignment() {
                       </div>
                       <div className="max-h-[300px] overflow-y-auto space-y-2">
                         {shifts
-                          .filter((shift) =>
-                            shift.name.toLowerCase().includes(shiftSearch.toLowerCase()) ||
-                            shift.startTime.toLowerCase().includes(shiftSearch.toLowerCase()) ||
-                            shift.endTime.toLowerCase().includes(shiftSearch.toLowerCase())
+                          .filter(
+                            (shift) =>
+                              shift.name
+                                .toLowerCase()
+                                .includes(shiftSearch.toLowerCase()) ||
+                              shift.startTime
+                                .toLowerCase()
+                                .includes(shiftSearch.toLowerCase()) ||
+                              shift.endTime
+                                .toLowerCase()
+                                .includes(shiftSearch.toLowerCase())
                           )
                           .map((shift) => (
                             <label
@@ -763,9 +925,14 @@ export default function ShiffAssignment() {
                       </div>
                       <div className="max-h-[300px] overflow-y-auto space-y-2">
                         {users
-                          ?.filter((emp) =>
-                            emp.fullName.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-                            emp.email.toLowerCase().includes(employeeSearch.toLowerCase())
+                          ?.filter(
+                            (emp) =>
+                              emp.fullName
+                                .toLowerCase()
+                                .includes(employeeSearch.toLowerCase()) ||
+                              emp.email
+                                .toLowerCase()
+                                .includes(employeeSearch.toLowerCase())
                           )
                           .map((emp) => (
                             <label
@@ -784,7 +951,9 @@ export default function ShiffAssignment() {
                                 className="mt-1"
                               />
                               <div className="flex-1">
-                                <div className="font-medium">{emp.fullName}</div>
+                                <div className="font-medium">
+                                  {emp.fullName}
+                                </div>
                                 <div className="text-sm text-muted-foreground">
                                   {emp.email}
                                 </div>

@@ -24,9 +24,11 @@ export const shiftAssignmentApi = {
     await http.delete(`/work-shifts/delete/${shiftId}`);
   },
 
-  getAllAssignments: async () => {
+  getAllAssignments: async (dataFilter?: any) => {
     try {
-      const response = await http.get("/shift-assignments");
+      const response = await http.get("/shift-assignments", {
+        params: dataFilter,
+      });
       return response.data.data;
     } catch (error) {
       console.error("Lỗi khi lấy danh sách phân ca:", error);

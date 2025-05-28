@@ -31,8 +31,8 @@ public class WorkShiftAssignmentServiceImpl implements WorkShiftAssignmentServic
     private final EmployeeRepository employeeRepository;
 
     @Override
-    public List<WorkShiftAssignmentResponse> getAllAssignments() {
-        return workShiftAssignmentRepository.findAll().stream()
+    public List<WorkShiftAssignmentResponse> getAllAssignments( Long employeeId, Long workShiftId, Long month, Long year, Long departmentId) {
+        return workShiftAssignmentRepository.filterAssignments( employeeId, workShiftId, month, year, departmentId).stream()
                 .map(WorkShiftAssignmentConverter::toResponse)
                 .collect(Collectors.toList());
     }

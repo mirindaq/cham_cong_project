@@ -41,4 +41,20 @@ public interface WorkShiftAssignmentRepository extends JpaRepository<WorkShiftAs
                                         @Param("currentTime") LocalTime currentTime);
 
 
+
+    @Query("SELECT wa FROM WorkShiftAssignment wa " +
+            "JOIN wa.employee e " +
+            "JOIN wa.workShift ws " +
+            "WHERE (:employeeId IS NULL OR e.id = :employeeId) " +
+            "AND (:workShiftId IS NULL OR ws.id = :workShiftId) " +
+            "AND (:departmentId IS NULL OR e.department.id = :departmentId) " +
+            "AND EXTRACT(MONTH FROM wa.dateAssign) = :month " +
+            "AND EXTRACT(YEAR FROM wa.dateAssign) = :year")
+    List<WorkShiftAssignment> filterAssignments(
+            @Param("employeeId") Long employeeId,
+            @Param("workShiftId") Long workShiftId,
+            @Param("month") Long month,
+            @Param("year") Long year,
+            @Param("departmentId") Long departmentId
+    );
 } 
