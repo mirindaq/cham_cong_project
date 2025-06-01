@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -25,6 +26,18 @@ public class WorkShiftController {
                 HttpStatus.OK,
                 "Get all work shifts success",
                 workShiftService.getAllWorkShifts()
+        ));
+    }
+
+    @GetMapping("/employee/{employeeId}")
+    public ResponseEntity<ResponseSuccess<List<WorkShiftResponse>>> getWorkShiftsByEmployeeIdBetweenDate(
+            @PathVariable Long employeeId,
+            @RequestParam LocalDate startDate,
+            @RequestParam LocalDate endDate) {
+        return ResponseEntity.ok(new ResponseSuccess<>(
+                HttpStatus.OK,
+                "Get work shifts by employee ID success",
+                workShiftService.getWorkShiftsByEmployeeIdBetweenDate(employeeId, startDate, endDate)
         ));
     }
 

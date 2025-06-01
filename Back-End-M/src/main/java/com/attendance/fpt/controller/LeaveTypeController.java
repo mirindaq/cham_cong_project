@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -22,6 +23,14 @@ public class LeaveTypeController {
     public ResponseEntity<ResponseSuccess<List<LeaveTypeResponse>>> getAllLeaveTypes() {
         return ResponseEntity.ok(new ResponseSuccess<>(HttpStatus.OK,
                 "Get all leave types success", leaveTypeService.getAllLeaveTypes()));
+    }
+
+    @GetMapping("/employee/{employeeId}")
+    public ResponseEntity<ResponseSuccess<List<LeaveTypeResponse>>> getLeaveTypeEnableInYear(
+            @PathVariable Long employeeId) {
+        return ResponseEntity.ok(new ResponseSuccess<>(HttpStatus.OK,
+                "Get leave types by employee ID enable success",
+                leaveTypeService.getLeaveTypeEnableInYear(employeeId)));
     }
 
     @PostMapping("/add")

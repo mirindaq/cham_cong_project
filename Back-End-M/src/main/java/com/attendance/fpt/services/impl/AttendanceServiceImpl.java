@@ -17,6 +17,7 @@ import com.attendance.fpt.repositories.LocationRepository;
 import com.attendance.fpt.repositories.WorkShiftAssignmentRepository;
 import com.attendance.fpt.services.AttendanceService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +31,7 @@ import java.util.List;
 public class AttendanceServiceImpl implements AttendanceService {
 
     private final AttendanceRepository attendanceRepository;
-     private final WorkShiftAssignmentRepository workShiftAssignmentRepository;
+    private final WorkShiftAssignmentRepository workShiftAssignmentRepository;
     private final EmployeeRepository employeeRepository;
     private final LocationRepository locationRepository;
 
@@ -46,9 +47,9 @@ public class AttendanceServiceImpl implements AttendanceService {
             throw new IllegalArgumentException("Invalid input parameters");
         }
 
-       List<WorkShiftAssignment> workShiftAssignments =
-               workShiftAssignmentRepository.findAllByEmployeeAndMonthAndYear(employeeId, month, year);
-       List<Attendance> attendances = attendanceRepository.findAllByEmployeeAndMonthAndYear(employeeId, month, year);
+        List<WorkShiftAssignment> workShiftAssignments =
+                workShiftAssignmentRepository.findAllByEmployeeAndMonthAndYear(employeeId, month, year);
+        List<Attendance> attendances = attendanceRepository.findAllByEmployeeAndMonthAndYear(employeeId, month, year);
 
         if (workShiftAssignments.isEmpty() && attendances.isEmpty()) {
             return List.of();
@@ -61,7 +62,7 @@ public class AttendanceServiceImpl implements AttendanceService {
                             .findFirst()
                             .orElse(null);
 
-                    if ( attendance == null ) return AttendanceWorkShiftConverter.toResponseNoHaveAttendance(assignment);
+                    if (attendance == null) return AttendanceWorkShiftConverter.toResponseNoHaveAttendance(assignment);
                     return AttendanceWorkShiftConverter.toResponseHaveAttendance(assignment, attendance);
                 })
                 .toList();
@@ -105,7 +106,7 @@ public class AttendanceServiceImpl implements AttendanceService {
                 .findCurrentShiftAssignment(request.getEmployeeId(), now.toLocalDate(), currentTime)
                 .orElseThrow(() -> new ResourceNotFoundException("No active shift found"));
 
-        if ( currentShift.getAttendance() != null ) {
+        if (currentShift.getAttendance() != null) {
             throw new ConflictException("Bạn đã chấm công vào ca làm việc này rồi");
         }
 
@@ -157,12 +158,13 @@ public class AttendanceServiceImpl implements AttendanceService {
         double totalHours = calculateTotalHours(attendance.getCheckInTime(), now);
         attendance.setTotalHours(totalHours);
 
-        return AttendanceWorkShiftConverter.toResponseHaveAttendance(attendance.getWorkShiftAssignment(),attendanceRepository.save(attendance));
+        return AttendanceWorkShiftConverter.toResponseHaveAttendance(attendance.getWorkShiftAssignment(), attendanceRepository.save(attendance));
     }
 
     @Override
     public List<AttendanceWorkShiftResponse> getAllAttendances() {
-    List<Attendance> attendances = attendanceRepository.findAll();
+        Sort sort = Sort.by(Sort.Direction.DESC, "checkOutTime", "checkInTime");
+        List<Attendance> attendances = attendanceRepository.findAll(sort);
         if (!attendances.isEmpty()) {
             return attendances.stream()
                     .map(attendance -> AttendanceWorkShiftConverter.toResponseHaveAttendance(

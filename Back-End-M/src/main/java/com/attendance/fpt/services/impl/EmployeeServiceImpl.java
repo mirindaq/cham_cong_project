@@ -70,7 +70,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .password("1111")
                 .employee(employee)
                 .role(Role.valueOf(employeeAddRequest.getRole()))
-                .firstLogin(false)
+                .firstLogin(true)
                 .build();
 
         accountRepository.save(account);
@@ -142,6 +142,17 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.setDob(employeeProfileRequest.getDob());
 
         return EmployeeConverter.toResponse(employeeRepository.save(employee));
+    }
+
+    @Override
+    public List<EmployeeResponse> getEmployeeToAssignment() {
+        List<Employee> employees = employeeRepository.findAllByAccount_Role(Role.EMPLOYEE);
+        if (employees != null && !employees.isEmpty()) {
+            return employees.stream()
+                    .map(EmployeeConverter::toResponse)
+                    .collect(Collectors.toList());
+        }
+        return List.of();
     }
 
     @Override

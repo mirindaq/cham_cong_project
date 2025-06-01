@@ -3,7 +3,6 @@ package com.attendance.fpt.services.impl;
 import com.attendance.fpt.converter.ComplaintsConverter;
 import com.attendance.fpt.entity.Complaint;
 import com.attendance.fpt.entity.Employee;
-import com.attendance.fpt.entity.LeaveRequest;
 import com.attendance.fpt.enums.ComplaintStatus;
 import com.attendance.fpt.enums.ComplaintType;
 import com.attendance.fpt.exceptions.custom.ResourceNotFoundException;
@@ -22,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -64,11 +64,10 @@ public class ComplaintsServiceImpl implements ComplaintsService {
         complaintsRepository.save(complaint);
     }
 
-
     @Override
-    public ResponseWithPagination<List<ComplaintResponse>> getAllComplaints(int page, int limit) {
+    public ResponseWithPagination<List<ComplaintResponse>> getAllComplaintsByEmployeeId(int page, int limit, Long employeeId) {
         Pageable pageable = PageRequest.of(page-1, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Complaint> complaints = complaintsRepository.findAll(pageable);
+        Page<Complaint> complaints = complaintsRepository.findAllByEmployee_Id(employeeId, pageable);
 
         Page<ComplaintResponse> responsePage = complaints.map(ComplaintsConverter::toResponse);
 
@@ -82,9 +81,30 @@ public class ComplaintsServiceImpl implements ComplaintsService {
     }
 
     @Override
-    public ResponseWithPagination<List<ComplaintResponse>> getAllComplaintsByEmployeeId(int page, int limit, Long employeeId) {
-        Pageable pageable = PageRequest.of(page-1, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Complaint> complaints = complaintsRepository.findAllByEmployee_Id(employeeId, pageable);
+    public ResponseWithPagination<List<ComplaintResponse>> getAllComplaints(
+            int page,
+            int limit,
+            String employeeName,
+            LocalDate startDate,
+            LocalDate endDate,
+            Long departmentId,
+            String complaintType,
+            String status) {
+
+        Pageable pageable = PageRequest.of(page - 1, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        LocalDateTime startDateTime = startDate != null ? startDate.atStartOfDay() : null;
+        LocalDateTime endDateTime = endDate != null ? endDate.atTime(23, 59, 59) : null;
+
+        Page<Complaint> complaints = complaintsRepository.findAllWithFilters(
+                employeeName,
+                startDateTime,
+                endDateTime,
+                departmentId,
+                complaintType != null ? ComplaintType.valueOf(complaintType.toUpperCase()) : null,
+                status != null ? ComplaintStatus.valueOf(status.toUpperCase()) : null,
+                pageable);
+
 
         Page<ComplaintResponse> responsePage = complaints.map(ComplaintsConverter::toResponse);
 

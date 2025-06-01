@@ -11,6 +11,7 @@ import com.attendance.fpt.services.WorkShiftService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -48,6 +49,18 @@ public class WorkShiftServiceImpl implements WorkShiftService {
         }
         workShiftRepository.delete(workShift);
         return WorkShiftConverter.toResponse(workShift);
+    }
+
+    @Override
+    public List<WorkShiftResponse> getWorkShiftsByEmployeeIdBetweenDate(Long employeeId, LocalDate startDate, LocalDate endDate) {
+        List<WorkShift> workShifts = workShiftRepository.findByEmployeeIdAndDateBetween(employeeId, startDate, endDate);
+
+        if (workShifts != null && !workShifts.isEmpty()) {
+            return workShifts.stream()
+                    .map(WorkShiftConverter::toResponse)
+                    .collect(Collectors.toList());
+        }
+        return List.of();
     }
 
 }

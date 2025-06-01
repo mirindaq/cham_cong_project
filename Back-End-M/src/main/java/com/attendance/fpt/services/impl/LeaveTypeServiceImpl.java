@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +29,7 @@ public class LeaveTypeServiceImpl implements LeaveTypeService {
     @Override
     @Transactional
     public LeaveTypeResponse addLeaveType(LeaveTypeRequest leaveTypeRequest) {
-        if ( leaveTypeRepository.existsByName(leaveTypeRequest.getName())) {
+        if (leaveTypeRepository.existsByName(leaveTypeRequest.getName())) {
             throw new ConflictException("Leave type already exists");
         }
         LeaveType leaveType = new LeaveType();
@@ -54,6 +55,19 @@ public class LeaveTypeServiceImpl implements LeaveTypeService {
     public List<LeaveTypeResponse> getAllLeaveTypes() {
         List<LeaveType> leaveTypes = leaveTypeRepository.findAll();
         return leaveTypes.stream()
+                .map(LeaveTypeConverter::toResponse)
+                .toList();
+    }
+
+    @Override
+    public List<LeaveTypeResponse> getLeaveTypeEnableInYear(Long employeeId) {
+        List<LeaveBalance> leaveBalances = leaveBalanceRepository.findAllByEmployee_IdAndYear(employeeId, LocalDate.now().getYear());
+
+        List<LeaveType> rs = leaveBalances.stream()
+                .map((item) -> item.getRemainingDay() > 0 ? item.getLeaveType() : null)
+                .filter(Objects::nonNull)
+                .toList();
+        return rs.stream()
                 .map(LeaveTypeConverter::toResponse)
                 .toList();
     }

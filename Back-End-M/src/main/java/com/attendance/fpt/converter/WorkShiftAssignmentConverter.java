@@ -13,6 +13,7 @@ public class WorkShiftAssignmentConverter {
                 .employeeId(workShiftAssignment.getEmployee().getId())
                 .employeeName(workShiftAssignment.getEmployee().getFullName())
                 .employeeDepartmentName(workShiftAssignment.getEmployee().getDepartment().getName())
+                .attendanceId(workShiftAssignment.getAttendance() != null ? workShiftAssignment.getAttendance().getId() : null)
                 .build();
     }
 }

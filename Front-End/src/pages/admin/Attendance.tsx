@@ -26,20 +26,27 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AdminLayout } from "@/components/admin-layout";
-import { Plus, MoreHorizontal, Edit, Lock, Unlock } from "lucide-react";
+import { MoreHorizontal, Edit } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import type { Attendance } from "@/types/attendance.type";
 import { attendanceApi } from "@/services/attendance.service";
-
 
 function AttendancePage() {
   const [loading, setLoading] = useState(false);
@@ -51,15 +58,16 @@ function AttendancePage() {
   });
 
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [selectedAttendance, setSelectedAttendance] = useState<Attendance | null>(null);
+  const [selectedAttendance, setSelectedAttendance] =
+    useState<Attendance | null>(null);
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
-    const employeeName = searchParams.get('employeeName') || '';
-    const date = searchParams.get('date') || '';
-    const status = searchParams.get('status') || 'all';
-    const location = searchParams.get('location') || 'all';
+    const employeeName = searchParams.get("employeeName") || "";
+    const date = searchParams.get("date") || "";
+    const status = searchParams.get("status") || "all";
+    const location = searchParams.get("location") || "all";
 
     setFilter({
       employeeName,
@@ -73,7 +81,6 @@ function AttendancePage() {
     const loadAttendances = async () => {
       setLoading(true);
       try {
-
         const response = await attendanceApi.getAllAttendances(searchParams);
         setAttendances(response.data);
       } catch (error) {
@@ -89,10 +96,10 @@ function AttendancePage() {
   const handleFilter = () => {
     const newParams = new URLSearchParams();
 
-    if (filter.employeeName) newParams.set('employeeName', filter.employeeName);
-    if (filter.date) newParams.set('date', filter.date);
-    if (filter.status !== 'all') newParams.set('status', filter.status);
-    if (filter.location !== 'all') newParams.set('location', filter.location);
+    if (filter.employeeName) newParams.set("employeeName", filter.employeeName);
+    if (filter.date) newParams.set("date", filter.date);
+    if (filter.status !== "all") newParams.set("status", filter.status);
+    if (filter.location !== "all") newParams.set("location", filter.location);
 
     setSearchParams(newParams);
   };
@@ -109,7 +116,10 @@ function AttendancePage() {
       LEAVE: { label: "Nghỉ phép", className: "bg-blue-500" },
     };
 
-    const statusInfo = statusMap[status] || { label: status, className: "bg-gray-500" };
+    const statusInfo = statusMap[status] || {
+      label: status,
+      className: "bg-gray-500",
+    };
     return <Badge className={statusInfo.className}>{statusInfo.label}</Badge>;
   };
 
@@ -127,97 +137,179 @@ function AttendancePage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row flex-wrap gap-4 mb-6">
-            <Input
-              placeholder="Tìm theo tên nhân viên..."
-              className="w-full sm:w-[220px]"
-              value={filter.employeeName}
-              onChange={(e) =>
-                setFilter((prev) => ({ ...prev, employeeName: e.target.value }))
-              }
-            />
+          <div className="bg-muted/50 py-2 rounded-lg mb-6 px-2">
+            <div className="flex items-center gap-4">
+              <div>
+                <Label className="text-sm font-medium mb-1">
+                  Tên nhân viên
+                </Label>
+                <Input
+                  placeholder="Tìm theo tên nhân viên..."
+                  className="w-full sm:w-[220px]"
+                  value={filter.employeeName}
+                  onChange={(e) =>
+                    setFilter((prev) => ({
+                      ...prev,
+                      employeeName: e.target.value,
+                    }))
+                  }
+                />
+              </div>
 
-            <Input
-              type="date"
-              className="w-full sm:w-[220px]"
-              value={filter.date}
-              onChange={(e) =>
-                setFilter((prev) => ({ ...prev, date: e.target.value }))
-              }
-            />
+              <div>
+                <Label className="text-sm font-medium mb-1">Ngày</Label>
+                <Input
+                  type="date"
+                  className="w-full sm:w-[220px]"
+                  value={filter.date}
+                  onChange={(e) =>
+                    setFilter((prev) => ({ ...prev, date: e.target.value }))
+                  }
+                />
+              </div>
 
-            <Select
-              value={filter.status}
-              onValueChange={(value) =>
-                setFilter((prev) => ({ ...prev, status: value }))
-              }
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Trạng thái" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                <SelectItem value="PRESENT">Có mặt</SelectItem>
-                <SelectItem value="LATE">Đi muộn</SelectItem>
-                <SelectItem value="LEAVE">Nghỉ phép</SelectItem>
-              </SelectContent>
-            </Select>
+              <div>
+                <Label className="text-sm font-medium mb-1">Trạng thái</Label>
+                <Select
+                  value={filter.status}
+                  onValueChange={(value) =>
+                    setFilter((prev) => ({ ...prev, status: value }))
+                  }
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                    <SelectItem value="PRESENT">Có mặt</SelectItem>
+                    <SelectItem value="LATE">Đi muộn</SelectItem>
+                    <SelectItem value="LEAVE">Nghỉ phép</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <Button className="w-full sm:w-auto" onClick={handleFilter}>
-              Lọc
-            </Button>
+              <Button
+                className="w-full sm:w-auto self-end"
+                onClick={handleFilter}
+              >
+                Lọc
+              </Button>
+            </div>
           </div>
 
           <div className="rounded-md border">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="p-2 text-left font-medium">Nhân viên</th>
-                  <th className="p-2 text-left font-medium">Phòng ban</th>
-                  <th className="p-2 text-left font-medium">Ngày</th>
-                  <th className="p-2 text-left font-medium">Giờ vào</th>
-                  <th className="p-2 text-left font-medium">Giờ ra</th>
-                  <th className="p-2 text-left font-medium">Ca làm</th>
-                  <th className="p-2 text-left font-medium">Vị trí</th>
-                  <th className="p-2 text-left font-medium">Trạng thái</th>
-                  <th className="p-2 text-left font-medium">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table className="w-full">
+              <TableHeader>
+                <TableRow className="border-b bg-muted/50">
+                  <TableHead className="p-2 text-left font-medium">
+                    STT
+                  </TableHead>
+                  <TableHead className="p-2 text-left font-medium">
+                    Nhân viên
+                  </TableHead>
+                  <TableHead className="p-2 text-left font-medium">
+                    Phòng ban
+                  </TableHead>
+                  <TableHead className="p-2 text-left font-medium">
+                    Ngày
+                  </TableHead>
+                  <TableHead className="p-2 text-left font-medium">
+                    Giờ vào
+                  </TableHead>
+                  <TableHead className="p-2 text-left font-medium">
+                    Giờ ra
+                  </TableHead>
+                  <TableHead className="p-2 text-left font-medium">
+                    Ca làm
+                  </TableHead>
+                  <TableHead className="p-2 text-left font-medium">
+                    Vị trí
+                  </TableHead>
+                  <TableHead className="p-2 text-left font-medium">
+                    Trạng thái
+                  </TableHead>
+                  <TableHead className="p-2 text-left font-medium">
+                    Thao tác
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {loading ? (
-                  <tr>
-                    <td colSpan={9} className="p-4 text-center">
+                  <TableRow className="border-b">
+                    <TableCell colSpan={9} className="p-4 text-center">
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : attendances?.length > 0 ? (
                   attendances.map((attendance) => (
-                    <tr key={attendance.attendanceId} className="border-b">
-                      <td className="p-2">{attendance.workShifts.employeeName}</td>
-                      <td className="p-2">{attendance.workShifts.employeeDepartmentName}</td>
-                      <td className="p-2">
+                    <TableRow
+                      key={attendance.attendanceId}
+                      className="border-b"
+                    >
+                      <TableCell className="p-2">
+                        {attendances.findIndex(
+                          (a) => a.attendanceId === attendance.attendanceId
+                        ) + 1}
+                      </TableCell>
+                      <TableCell className="p-2">
+                        {attendance.workShifts.employeeName}
+                      </TableCell>
+                      <TableCell className="p-2">
+                        {attendance.workShifts.employeeDepartmentName}
+                      </TableCell>
+                      <TableCell className="p-2">
                         {format(new Date(attendance.date), "dd/MM/yyyy", {
                           locale: vi,
                         })}
-                      </td>
-                      <td className="p-2">
-                        {format(new Date(attendance.checkIn), "HH:mm", {
-                          locale: vi,
-                        })}
-                      </td>
-                      <td className="p-2">
-                        {attendance.checkOut
-                          ? format(new Date(attendance.checkOut), "HH:mm", {
-                            locale: vi,
-                          })
-                          : "-"}
-                      </td>
-                      <td className="p-2">{attendance.workShifts.workShift.name}</td>
-                      <td className="p-2">{attendance.locationName}</td>
-                      <td className="p-2">{getStatusBadge(attendance.status)}</td>
-                      <td className="p-2">
+                      </TableCell>
+                      <TableCell className="p-2">
+                      {(() => {
+                        let checkOutDisplay = "-";
+                        if (attendance.checkIn) {
+                          checkOutDisplay = format(
+                            new Date(attendance.checkOut),
+                            "HH:mm",
+                            {
+                              locale: vi,
+                            }
+                          );
+                        }
+                        return (
+                          <TableCell className="p-2">
+                            {checkOutDisplay}
+                          </TableCell>
+                        );
+                      })()}
+                      </TableCell>
+                      {(() => {
+                        let checkOutDisplay = "-";
+                        if (attendance.checkOut) {
+                          checkOutDisplay = format(
+                            new Date(attendance.checkOut),
+                            "HH:mm",
+                            {
+                              locale: vi,
+                            }
+                          );
+                        }
+                        return (
+                          <TableCell className="p-2">
+                            {checkOutDisplay}
+                          </TableCell>
+                        );
+                      })()}
+                      <TableCell className="p-2">
+                        {attendance.workShifts.workShift.name}
+                      </TableCell>
+                      <TableCell className="p-2">
+                        {attendance.locationName}
+                      </TableCell>
+                      <TableCell className="p-2">
+                        {getStatusBadge(attendance.status)}
+                      </TableCell>
+                      <TableCell className="p-2">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm">
@@ -237,18 +329,21 @@ function AttendancePage() {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))
                 ) : (
-                  <tr>
-                    <td colSpan={9} className="p-4 text-center text-muted-foreground">
+                  <TableRow>
+                    <TableCell
+                      colSpan={9}
+                      className="p-4 text-center text-muted-foreground"
+                    >
                       Không có dữ liệu chấm công.
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
         <CardFooter className="flex justify-between">
@@ -318,4 +413,4 @@ function AttendancePage() {
   );
 }
 
-export default AttendancePage; 
+export default AttendancePage;

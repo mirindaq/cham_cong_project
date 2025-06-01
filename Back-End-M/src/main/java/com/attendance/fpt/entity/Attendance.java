@@ -37,6 +37,10 @@ public class Attendance {
     @ManyToOne
     @JoinColumn(name = "location_id")
     private Location location;
+
+    @ManyToOne
+    @JoinColumn(name = "leave_request_id")
+    private LeaveRequest leaveRequest;
     
     @Enumerated(EnumType.STRING)
     private AttendanceStatus status;

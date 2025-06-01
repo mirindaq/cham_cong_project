@@ -26,7 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AdminLayout } from "@/components/admin-layout";
-import { Plus, MoreHorizontal, Lock, Unlock, Edit, Trash } from "lucide-react";
+import { Plus, MoreHorizontal, Edit } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,8 +39,16 @@ import { userApi } from "@/services/user.service";
 import { departmentApi } from "@/services/department.service";
 import type { User, UserRequest } from "@/types/user.type";
 import { useSearchParams } from "react-router";
-import { isAfter, isBefore, startOfDay } from "date-fns";
+import { isBefore, startOfDay } from "date-fns";
 import PaginationComponent from "@/components/PaginationComponent";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 function UsersPage() {
   const [loading, setLoading] = useState(false);
@@ -249,126 +257,187 @@ function UsersPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row flex-wrap gap-4 mb-6">
-            <Input
-              placeholder="Tìm theo tên..."
-              className="w-full sm:w-[220px]"
-              value={filter.name}
-              onChange={(e) =>
-                setFilter((prev) => ({ ...prev, name: e.target.value }))
-              }
-            />
+          <div className="bg-muted/50 py-2 rounded-lg mb-6 px-2">
+            <div className="flex items-center gap-4">
+              <div>
+                <Label className="text-sm font-medium mb-1">Nhân viên</Label>
+                <Input
+                  placeholder="Tìm theo tên..."
+                  className="w-full sm:w-[220px]"
+                  value={filter.name}
+                  onChange={(e) =>
+                    setFilter((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                />
+              </div>
 
-            <Input
-              placeholder="Tìm theo email..."
-              className="w-full sm:w-[220px]"
-              value={filter.email}
-              onChange={(e) =>
-                setFilter((prev) => ({ ...prev, email: e.target.value }))
-              }
-            />
+              <div>
+                <Label className="text-sm font-medium mb-1">Email</Label>
+                <Input
+                  placeholder="Tìm theo email..."
+                  className="w-full sm:w-[220px]"
+                  value={filter.email}
+                  onChange={(e) =>
+                    setFilter((prev) => ({ ...prev, email: e.target.value }))
+                  }
+                />
+              </div>
 
-            <Input
-              placeholder="Tìm theo số điện thoại..."
-              className="w-full sm:w-[220px]"
-              value={filter.phone}
-              onChange={(e) =>
-                setFilter((prev) => ({ ...prev, phone: e.target.value }))
-              }
-            />
+              <div>
+                <Label className="text-sm font-medium mb-1">
+                  Số điện thoại
+                </Label>
+                <Input
+                  placeholder="Tìm theo số điện thoại..."
+                  className="w-full sm:w-[220px]"
+                  value={filter.phone}
+                  onChange={(e) =>
+                    setFilter((prev) => ({ ...prev, phone: e.target.value }))
+                  }
+                />
+              </div>
 
-            <Select
-              value={filter.departmentName}
-              onValueChange={(value) =>
-                setFilter((prev) => ({ ...prev, departmentName: value }))
-              }
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Tất cả phòng ban" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả phòng ban</SelectItem>
-                {departments.map((dept) => (
-                  <SelectItem key={dept.id} value={dept.name}>
-                    {dept.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <div>
+                <Label className="text-sm font-medium mb-1">Phòng ban</Label>
+                <Select
+                  value={filter.departmentName}
+                  onValueChange={(value) =>
+                    setFilter((prev) => ({ ...prev, departmentName: value }))
+                  }
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Tất cả phòng ban" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả phòng ban</SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <Select
-              value={filter.role}
-              onValueChange={(value) =>
-                setFilter((prev) => ({ ...prev, role: value }))
-              }
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Lọc theo vai trò" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả vai trò</SelectItem>
-                <SelectItem value="ADMIN">Quản trị viên</SelectItem>
-                <SelectItem value="EMPLOYEE">Nhân viên</SelectItem>
-              </SelectContent>
-            </Select>
+              <div>
+                <Label className="text-sm font-medium mb-1">Vai trò</Label>
+                <Select
+                  value={filter.role}
+                  onValueChange={(value) =>
+                    setFilter((prev) => ({ ...prev, role: value }))
+                  }
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Lọc theo vai trò" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả vai trò</SelectItem>
+                    <SelectItem value="ADMIN">Quản trị viên</SelectItem>
+                    <SelectItem value="EMPLOYEE">Nhân viên</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <Select
-              value={filter.status}
-              onValueChange={(value) =>
-                setFilter((prev) => ({ ...prev, status: value }))
-              }
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Lọc theo trạng thái" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                <SelectItem value="active">Đang hoạt động</SelectItem>
-                <SelectItem value="inactive">Không hoạt động</SelectItem>
-              </SelectContent>
-            </Select>
+              <div>
+                <Label className="text-sm font-medium mb-1">Trạng thái</Label>
+                <Select
+                  value={filter.status}
+                  onValueChange={(value) =>
+                    setFilter((prev) => ({ ...prev, status: value }))
+                  }
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Lọc theo trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                    <SelectItem value="active">Đang hoạt động</SelectItem>
+                    <SelectItem value="inactive">Không hoạt động</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <Button className="w-full sm:w-auto" onClick={handleFilter}>
-              Lọc
-            </Button>
+              <Button
+                className="w-full sm:w-auto self-end"
+                onClick={handleFilter}
+              >
+                Lọc
+              </Button>
+            </div>
           </div>
 
           <div className="rounded-md border">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="p-2 text-left font-medium">Tên</th>
-                  <th className="p-2 text-left font-medium">Email</th>
-                  <th className="p-2 text-left font-medium">Số điện thoại</th>
-                  <th className="p-2 text-left font-medium">Vai trò</th>
-                  <th className="p-2 text-left font-medium">Phòng ban</th>
-                  <th className="p-2 text-left font-medium">Trạng thái</th>
-                  <th className="p-2 text-left font-medium">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b bg-muted/50">
+                  <TableHead className="p-2 text-left font-medium">
+                    STT
+                  </TableHead>
+                  <TableHead className="p-2 text-left font-medium">
+                    Họ và tên
+                  </TableHead>
+                  <TableHead className="p-2 text-left font-medium">
+                    Email
+                  </TableHead>
+                  <TableHead className="p-2 text-left font-medium">
+                    Số điện thoại
+                  </TableHead>
+                  <TableHead className="p-2 text-left font-medium">
+                    Vai trò
+                  </TableHead>
+                  <TableHead className="p-2 text-left font-medium">
+                    Phòng ban
+                  </TableHead>
+                  <TableHead className="p-2 text-left font-medium">
+                    Trạng thái
+                  </TableHead>
+                  <TableHead className="p-2 text-left font-medium">
+                    Thao tác
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {loading ? (
-                  <tr>
-                    <td colSpan={7} className="p-4 text-center">
+                  <TableRow>
+                    <TableCell colSpan={8} className="p-4 text-center">
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : users?.length > 0 ? (
                   users.map((user) => (
-                    <tr key={user.id} className="border-b">
-                      <td className="p-2">{user.fullName}</td>
-                      <td className="p-2">{user.email}</td>
-                      <td className="p-2">{user.phone}</td>
-                      <td className="p-2">
-                        <Badge variant="outline" className="capitalize">
-                          {user.role}
-                        </Badge>
-                      </td>
-                      <td className="p-2">{user.departmentName}</td>
-                      <td className="p-2">{getStatusBadge(user.active)}</td>
-                      <td className="p-2">
+                    <TableRow key={user.id} className="border-b">
+                      <TableCell className="p-2">
+                        {(currentPage - 1) * 10 + users.indexOf(user) + 1}
+                      </TableCell>
+                      <TableCell className="p-2">{user.fullName}</TableCell>
+                      <TableCell className="p-2">{user.email}</TableCell>
+                      <TableCell className="p-2">{user.phone}</TableCell>
+                      <TableCell className="p-2">
+                        {user.role === "ADMIN" ? (
+                          <Badge
+                            variant="outline"
+                            className="bg-blue-500 text-white mr-2 capitalize"
+                          >
+                            Quản trị viên
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="bg-yellow-500 text-white mr-2 capitalize"
+                          >
+                            Nhân viên
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="p-2">
+                        {user.departmentName}
+                      </TableCell>
+                      <TableCell className="p-2">
+                        {getStatusBadge(user.active)}
+                      </TableCell>
+                      <TableCell className="p-2">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm">
@@ -396,21 +465,22 @@ function UsersPage() {
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))
                 ) : (
-                  <tr>
-                    <td
-                      colSpan={7}
+                  <TableRow>
+                    <TableCell
+                      colSpan={8}
                       className="p-4 text-center text-muted-foreground"
                     >
                       Không có người dùng nào.
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
+
             <PaginationComponent
               currentPage={currentPage}
               totalPage={totalPage}

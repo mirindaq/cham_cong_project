@@ -72,7 +72,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public void changePassword(ChangePasswordRequest changePasswordRequest) {
-        Employee employee = employeeRepository.findById(changePasswordRequest.getEmployeeId())
+        Employee employee = employeeRepository.findByEmail(changePasswordRequest.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("Employee not found"));
 
         Account account = employee.getAccount();

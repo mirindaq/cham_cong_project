@@ -22,11 +22,19 @@ export const userApi = {
   },
 
   updateProfile: async (employeeId: number, profileData: any) => {
-    const response = await http.put(`/employees/update-profile/${employeeId}`, profileData);
+    const response = await http.put(
+      `/employees/update-profile/${employeeId}`,
+      profileData
+    );
     return response.data;
   },
   countAllUsers: async () => {
-    const response = await http.get('/employees/count');
+    const response = await http.get("/employees/count");
     return response.data;
-  }
+  },
+
+  getEmployeeToAssignment: async () => {
+    const response = await http.get("/employees/employee-to-assignment");
+    return response.data.data;
+  },
 };

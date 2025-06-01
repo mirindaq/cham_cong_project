@@ -1,9 +1,12 @@
+import type { LeaveType } from "./leaveType";
+
 export type LeaveRequestAdd = {
   employeeId: number;
   startDate: Date;
   endDate: Date;
   reason: string;
   leaveTypeId: number;
+  workShiftId: number;
 };
 
 export type LeaveRequestResponse = {
@@ -27,8 +30,3 @@ export enum LeaveRequestStatus {
   REJECTED = "REJECTED",
   RECALLED = "RECALLED",
 }
-export type LeaveType = {
-  id: number;
-  name: string;
-  maxDayPerYear: number;
-};

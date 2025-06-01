@@ -29,7 +29,7 @@ public class AttendanceWorkShiftConverter {
                 .checkOut(attendance.getCheckOutTime())
                 .status(attendance.getStatus().name())
                 .attendanceId(attendance.getId())
-                .locationName(attendance.getLocation().getName())
+                .locationName( attendance.getLocation() != null ? attendance.getLocation().getName() : null)
                 .build();
     }
 }

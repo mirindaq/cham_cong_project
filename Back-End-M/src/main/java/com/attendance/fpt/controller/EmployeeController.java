@@ -1,7 +1,5 @@
 package com.attendance.fpt.controller;
 
-
-import com.attendance.fpt.entity.Employee;
 import com.attendance.fpt.model.request.EmployeeAddRequest;
 import com.attendance.fpt.model.request.EmployeeProfileRequest;
 import com.attendance.fpt.model.response.EmployeeResponse;
@@ -35,6 +33,12 @@ public class EmployeeController {
             @RequestParam(value = "departmentName", required = false) String departmentName) {
         return ResponseEntity.ok(new ResponseSuccess<>(HttpStatus.OK,
                 "Get employee success", employeeService.getAllEmployees(page, limit, name, email, phone, role, status, departmentName)));
+    }
+
+    @GetMapping("/employee-to-assignment")
+    public ResponseEntity<ResponseSuccess<List<EmployeeResponse>>> getEmployeeToAssignment() {
+        return ResponseEntity.ok(new ResponseSuccess<>(HttpStatus.OK,
+                "Get employee to assignment success", employeeService.getEmployeeToAssignment()));
     }
 
     @GetMapping("/profile/{employeeId}")

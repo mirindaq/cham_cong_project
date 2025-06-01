@@ -22,22 +22,19 @@ import {
   startOfMonth,
   endOfMonth,
   eachDayOfInterval,
-  addMonths,
-  subMonths,
   isSameMonth,
   isToday,
   isSameDay,
   isAfter,
 } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -63,11 +60,10 @@ import { vi } from "date-fns/locale";
 import { toast } from "sonner";
 import { shiftAssignmentApi } from "@/services/shiftAssignment.service";
 import { userApi } from "@/services/user.service";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
 import { departmentApi } from "@/services/department.service";
 import type { Department } from "@/types/department.type";
 import { useSearchParams } from "react-router";
+import { workShiftApi } from "@/services/workShift.service";
 
 export default function ShiffAssignment() {
   const [shifts, setShifts] = useState<WorkShift[]>([]);
@@ -115,13 +111,13 @@ export default function ShiffAssignment() {
       try {
         setIsLoading(true);
         const [shiftsData, usersData, departmentsData] = await Promise.all([
-          shiftAssignmentApi.getAllShifts(),
-          userApi.getAllUsers({}),
+          workShiftApi.getAllShifts(),
+          userApi.getEmployeeToAssignment(),
           departmentApi.getAllDepartments(),
         ]);
 
         if (shiftsData) setShifts(shiftsData);
-        if (usersData) setUsers(usersData.data);
+        if (usersData) setUsers(usersData);
         if (departmentsData) setDepartments(departmentsData);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -147,8 +143,12 @@ export default function ShiffAssignment() {
           setAssignments([]);
           toast.error("Không tìm thấy phân ca phù hợp.");
         }
-      } catch (error) {
-        toast.error("Lỗi khi lấy dữ liệu phân ca.");
+      } catch (error: any) {
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Lỗi khi lấy dữ liệu phân ca."
+        );
       } finally {
         setIsCalendarLoading(false);
       }
@@ -168,7 +168,7 @@ export default function ShiffAssignment() {
     }
 
     try {
-      const addedShift = await shiftAssignmentApi.addShift(newShift);
+      const addedShift = await workShiftApi.addShift(newShift);
       setShifts((prev) => [...prev, addedShift]);
       setShowAddShift(false);
       setNewShift({ name: "", startTime: "", endTime: "" });
@@ -236,7 +236,7 @@ export default function ShiffAssignment() {
 
   const handleDeleteShift = async (shiftId: number) => {
     try {
-      await shiftAssignmentApi.deleteShift(shiftId);
+      await workShiftApi.deleteShift(shiftId);
       setShifts((prev) => prev.filter((s) => s.id !== shiftId));
       toast.success("Xóa ca làm thành công!");
     } catch (error: any) {
@@ -318,11 +318,13 @@ export default function ShiffAssignment() {
             return (
               <div
                 key={day.toString()}
-                className={`min-h-[100px] p-2 border rounded-lg ${isToday(day) ? "bg-primary/5" : ""
-                  } ${!isSameMonth(day, currentMonth)
+                className={`min-h-[100px] p-2 border rounded-lg ${
+                  isToday(day) ? "bg-primary/5" : ""
+                } ${
+                  !isSameMonth(day, currentMonth)
                     ? "text-muted-foreground opacity-50"
                     : ""
-                  }`}
+                }`}
               >
                 <div className="font-medium mb-1">{format(day, "d")}</div>
                 <div className="space-y-1">
@@ -358,7 +360,7 @@ export default function ShiffAssignment() {
                           {isAfter(
                             new Date(assignment.dateAssign),
                             new Date()
-                          ) && <Trash2 className="h-3 w-3 text-destructive" />}
+                          ) && !assignment.attendanceId && <Trash2 className="h-3 w-3 text-destructive" />}
                         </Button>
                       </div>
                     </div>
@@ -405,37 +407,80 @@ export default function ShiffAssignment() {
                 </Button>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full border">
-                    <thead>
-                      <tr className="bg-muted/50">
-                        <th className="p-2 text-left">Tên ca</th>
-                        <th className="p-2 text-left">Bắt đầu</th>
-                        <th className="p-2 text-left">Kết thúc</th>
-                        <th className="p-2 text-left">Thao tác</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {shifts.map((shift) => (
-                        <tr key={shift.id} className="border-b">
-                          <td className="p-2">{shift.name}</td>
-                          <td className="p-2">{shift.startTime}</td>
-                          <td className="p-2">{shift.endTime}</td>
-                          <td className="p-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteShift(shift.id)}
-                              className="hover:bg-destructive/10"
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="p-2 text-left">STT</TableHead>
+                      <TableHead className="p-2 text-left">Tên ca</TableHead>
+                      <TableHead className="p-2 text-left">Bắt đầu</TableHead>
+                      <TableHead className="p-2 text-left">Kết thúc</TableHead>
+                      <TableHead className="p-2 text-left">Thao tác</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {shifts.map((shift, idx) => (
+                      <TableRow key={shift.id} className="border-b">
+                        <TableCell className="p-2">{idx + 1}</TableCell>
+                        <TableCell className="p-2">
+                          <span
+                            className="inline-block w-2 h-2 rounded-full mr-2 align-middle"
+                            style={{
+                              backgroundColor: [
+                                "#3b82f6",
+                                "#10b981",
+                                "#f59e42",
+                                "#ef4444",
+                                "#a855f7",
+                              ][shift.id % 5],
+                            }}
+                            title="Màu ca làm"
+                          ></span>
+                          {shift.name}
+                        </TableCell>
+                        <TableCell className="p-2">{shift.startTime}</TableCell>
+                        <TableCell className="p-2">{shift.endTime}</TableCell>
+                        <TableCell className="p-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteShift(shift.id)}
+                            className="hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {shifts.length === 0 && (
+                      <TableRow>
+                        <TableCell
+                          colSpan={5}
+                          className="text-center py-8 text-muted-foreground"
+                        >
+                          <div className="flex flex-col items-center gap-2">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="24"
+                              height="24"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="w-8 h-8"
                             >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                              <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+                              <path d="M12 8v4" />
+                              <path d="M12 16h.01" />
+                            </svg>
+                            <p>Không có ca làm nào</p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </TabsContent>
@@ -548,7 +593,7 @@ export default function ShiffAssignment() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Tất cả nhân viên</SelectItem>
-                          {users.map((emp) => (
+                          {users?.map((emp) => (
                             <SelectItem key={emp.id} value={emp.id.toString()}>
                               {emp.fullName}
                             </SelectItem>
@@ -635,6 +680,7 @@ export default function ShiffAssignment() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/50">
+                          <TableHead className="font-medium">STT</TableHead>
                           <TableHead className="font-medium">Ngày</TableHead>
                           <TableHead className="font-medium">Ca làm</TableHead>
                           <TableHead className="font-medium">
@@ -658,6 +704,11 @@ export default function ShiffAssignment() {
                             className="hover:bg-muted/50"
                           >
                             <TableCell className="font-medium">
+                              {assignments.findIndex(
+                                (a) => a.id === assignment.id
+                              ) + 1}
+                            </TableCell>
+                            <TableCell className="font-medium">
                               {format(
                                 new Date(assignment.dateAssign),
                                 "dd/MM/yyyy"
@@ -665,7 +716,18 @@ export default function ShiffAssignment() {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-primary"></div>
+                                <div
+                                  className={`w-2 h-2 rounded-full`}
+                                  style={{
+                                    backgroundColor: [
+                                      "#3b82f6",
+                                      "#10b981",
+                                      "#f59e42",
+                                      "#ef4444",
+                                      "#a855f7",
+                                    ][assignment.workShift.id % 5],
+                                  }}
+                                ></div>
                                 {assignment.workShift.name}
                               </div>
                             </TableCell>
@@ -680,21 +742,21 @@ export default function ShiffAssignment() {
                               {isAfter(
                                 new Date(assignment.dateAssign),
                                 new Date()
-                              ) && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() =>
-                                      handleDeleteAssignment(
-                                        assignment.id,
-                                        assignment.employeeId
-                                      )
-                                    }
-                                    className="hover:bg-destructive/10"
-                                  >
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                  </Button>
-                                )}
+                              ) && !assignment.attendanceId && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    handleDeleteAssignment(
+                                      assignment.id,
+                                      assignment.employeeId
+                                    )
+                                  }
+                                  className="hover:bg-destructive/10"
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              )}
                             </TableCell>
                           </TableRow>
                         ))}

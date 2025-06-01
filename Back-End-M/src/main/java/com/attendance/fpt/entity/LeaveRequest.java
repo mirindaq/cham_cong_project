@@ -37,6 +37,10 @@ public class LeaveRequest {
     @ManyToOne
     @JoinColumn(name = "leave_type_id")
     private LeaveType leaveType;
+
+    @ManyToOne
+    @JoinColumn(name = "work_shift_id")
+    private WorkShift workShift;
     
     @Enumerated(EnumType.STRING)
     private LeaveRequestStatus status;

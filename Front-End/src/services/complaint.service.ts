@@ -5,9 +5,9 @@ import type {
 import http from "@/utils/http";
 
 export const complaintApi = {
-  getAllComplaints: async (page = 1, size = 10) => {
+  getAllComplaints: async (dataFilter: any) => {
     const response = await http.get(`/complaints`, {
-      params: { page, size },
+      params: dataFilter,
     });
     return response.data.data;
   },
@@ -15,11 +15,10 @@ export const complaintApi = {
   getAllComplaintsByEmployee: async (
     employeeId: number,
     page = 1,
-    size = 3
+    limit = 3
   ) => {
-    console.log(page);
     const response = await http.get(`/complaints/employee/${employeeId}`, {
-      params: { page, size },
+      params: { page, limit },
     });
     return response.data.data;
   },
@@ -34,7 +33,7 @@ export const complaintApi = {
     return response.data;
   },
   getPendingComplaints: async () => {
-    const response = await http.get('/complaints/pending');
+    const response = await http.get("/complaints/pending");
     return response.data;
-  }
+  },
 };

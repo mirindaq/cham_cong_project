@@ -1,11 +1,13 @@
 import type { LeaveRequestAdd } from "@/types/leaveRequest.type";
 import http from "@/utils/http";
+import axios from "axios";
 
 export const leaveRequestApi = {
-  getAllLeaveRequests: async (page = 1, size = 10) => {
+  getAllLeaveRequests: async (dataFilter: any) => {
     const response = await http.get(`/leave-requests`, {
-      params: { page, size },
+      params: dataFilter,
     });
+
     return response.data.data;
   },
 
@@ -30,12 +32,31 @@ export const leaveRequestApi = {
     return response.data;
   },
 
-  rejectLeaveRequest: async (id: number) => {
-    const response = await http.put(`/leave-requests/${id}/reject`);
+  getPendingLeaveRequests: async () => {
+    const response = await http.get("/leave-requests/pending");
     return response.data;
   },
-  getPendingLeaveRequests: async () => {
-    const response = await http.get('/leave-requests/pending');
+
+  approveLeaveRequest: async (
+    id: number,
+    responseNote: string,
+    responseById: number
+  ) => {
+    const response = await http.put(`/leave-requests/${id}/approve`, {
+      responseNote,
+      responseById,
+    });
     return response.data;
-  }
+  },
+  rejectLeaveRequest: async (
+    id: number,
+    responseNote: string,
+    responseById: number
+  ) => {
+    const response = await http.put(`/leave-requests/${id}/reject`, {
+      responseNote,
+      responseById,
+    });
+    return response.data;
+  },
 };

@@ -33,6 +33,14 @@ import type { User } from "@/types/user.type";
 import { toast } from "sonner";
 import { complaintApi } from "@/services/complaint.service";
 import PaginationComponent from "@/components/PaginationComponent";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 function DisputesPage() {
   const [disputeDate, setDisputeDate] = useState<Date | undefined>(undefined);
@@ -56,7 +64,6 @@ function DisputesPage() {
         currentPage,
         3
       );
-      console.log(currentPage);
       setComplaints(response.data);
       setTotalPage(response.totalPage);
     } catch (error) {
@@ -229,56 +236,49 @@ function DisputesPage() {
           </CardHeader>
           <CardContent>
             <div className="rounded-md border">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="p-4 text-left font-medium">
-                      Ngày cần khiếu nại
-                    </th>
-                    <th className="p-4 text-left font-medium">Ngày tạo</th>
-                    <th className="p-4 text-left font-medium">
-                      Loại khiếu nại
-                    </th>
-                    <th className="p-4 text-left font-medium">Lý Do</th>
-                    <th className="p-4 text-left font-medium">Ngày phản hồi</th>
-                    <th className="p-4 text-left font-medium">
-                      Người phản hồi
-                    </th>
-
-                    <th className="p-4 text-left font-medium">Trạng thái</th>
-                    <th className="p-4 text-left font-medium">Hành động</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>STT</TableHead>
+                    <TableHead>Ngày cần khiếu nại</TableHead>
+                    <TableHead>Ngày tạo</TableHead>
+                    <TableHead>Loại khiếu nại</TableHead>
+                    <TableHead>Lý Do</TableHead>
+                    <TableHead>Ngày phản hồi</TableHead>
+                    <TableHead>Người phản hồi</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>Hành động</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {complaints.map((complaint) => (
-                    <tr
-                      key={complaint.id}
-                      className="border-b hover:bg-muted/50"
-                    >
-                      <td className="p-4">{complaint.date}</td>
-                      <td className="p-4">
+                    <TableRow key={complaint.id}>
+                      <TableCell>
+                        {complaints.findIndex((c) => c.id === complaint.id) + 1}
+                      </TableCell>
+                      <TableCell>
+                        {complaint.date
+                          ? format(parseISO(complaint.date), "dd/MM/yyyy")
+                          : "N/A"}
+                      </TableCell>
+                      <TableCell>
                         {complaint.createdAt
                           ? format(
                               parseISO(complaint.createdAt),
                               "dd/MM/yyyy HH:mm:ss"
                             )
                           : "N/A"}
-                      </td>
-
-                      <td className="p-4">
+                      </TableCell>
+                      <TableCell>
                         {ComplaintType[
                           complaint.complaintType as keyof typeof ComplaintType
                         ] ?? complaint.complaintType}
-                      </td>
-                      <td className="p-4">{complaint.reason}</td>
-                      <td className="p-4">{complaint.responseDate}</td>
-                      <td className="p-4">{complaint.responseByFullName}</td>
-
-                      <td className="p-4">
-                        {getStatusBadge(complaint.status)}
-                      </td>
-
-                      <td className="p-4">
+                      </TableCell>
+                      <TableCell>{complaint.reason}</TableCell>
+                      <TableCell>{complaint.responseDate}</TableCell>
+                      <TableCell>{complaint.responseByFullName}</TableCell>
+                      <TableCell>{getStatusBadge(complaint.status)}</TableCell>
+                      <TableCell>
                         {complaint.status === ComplaintStatus.PENDING && (
                           <Button
                             variant="destructive"
@@ -288,11 +288,19 @@ function DisputesPage() {
                             Thu hồi
                           </Button>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                  {complaints.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center">
+                        Không có khiếu nại nào
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+
               <PaginationComponent
                 currentPage={currentPage}
                 totalPage={totalPage}

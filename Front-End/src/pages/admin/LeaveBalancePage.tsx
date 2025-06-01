@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -38,7 +38,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { leaveTypeApi } from "@/services/leaveType.service";
 import { toast } from "sonner";
-import type { LeaveType } from "@/types/leaveRequest.type";
+import type { LeaveType } from "@/types/leaveType";
 
 interface LeaveBalance {
   id: number;
@@ -308,6 +308,7 @@ export default function LeaveBalancePage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>STT</TableHead>
                         <TableHead>Tên loại nghỉ phép</TableHead>
                         <TableHead>Số ngày tối đa mỗi năm</TableHead>
                         <TableHead className="text-right">Thao tác</TableHead>
@@ -316,6 +317,9 @@ export default function LeaveBalancePage() {
                     <TableBody>
                       {leaveTypes.map((type) => (
                         <TableRow key={type.id}>
+                          <TableCell>
+                            {leaveTypes.findIndex((t) => t.id === type.id) + 1}
+                          </TableCell>
                           <TableCell>{type.name}</TableCell>
                           <TableCell>{type.maxDayPerYear} ngày</TableCell>
                           <TableCell className="text-right">

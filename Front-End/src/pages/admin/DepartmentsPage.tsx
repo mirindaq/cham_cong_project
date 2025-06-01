@@ -19,7 +19,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Pencil } from "lucide-react";
 import { AdminLayout } from "@/components/admin-layout";
-import http from "@/utils/http";
 import { departmentApi } from "@/services/department.service";
 
 interface Department {
@@ -123,7 +122,7 @@ export default function DepartmentsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[100px]">Mã</TableHead>
+                <TableHead className="w-[100px]">STT</TableHead>
                 <TableHead>Tên phòng ban</TableHead>
                 <TableHead className="w-[100px]">Thao tác</TableHead>
               </TableRow>
@@ -131,7 +130,11 @@ export default function DepartmentsPage() {
             <TableBody>
               {departments.map((department) => (
                 <TableRow key={department.id}>
-                  <TableCell>{department.id}</TableCell>
+                  <TableCell>
+                    {departments.findIndex(
+                      (dept) => dept.id === department.id
+                    ) + 1}
+                  </TableCell>
                   <TableCell>{department.name}</TableCell>
                   <TableCell>
                     <Button

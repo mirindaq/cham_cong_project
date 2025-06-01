@@ -22,4 +22,5 @@ public class LeaveRequestResponse {
     private LeaveTypeResponse leaveType;
     private LeaveRequestStatus status;
     private LocalDateTime createdAt;
+    private WorkShiftResponse workShift;
 } 

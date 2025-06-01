@@ -1,4 +1,4 @@
-import type { LeaveType } from "@/types/leaveRequest.type";
+import type { LeaveType } from "@/types/leaveType";
 import http from "@/utils/http";
 
 export const leaveTypeApi = {
@@ -14,6 +14,11 @@ export const leaveTypeApi = {
 
   addLeaveType: async (newLeaveType: Omit<LeaveType, "id">) => {
     const response = await http.post("/leave-types/add", newLeaveType);
+    return response.data.data;
+  },
+
+  getLeaveTypeEnableInYear: async (employeeId: number) => {
+    const response = await http.get(`/leave-types/employee/${employeeId}`);
     return response.data.data;
   },
 };

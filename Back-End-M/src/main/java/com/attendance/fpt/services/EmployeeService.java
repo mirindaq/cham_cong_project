@@ -15,6 +15,8 @@ public interface EmployeeService {
 
     EmployeeResponse updateProfile(Long employeeId, EmployeeProfileRequest employeeProfileRequest);
 
+    List<EmployeeResponse> getEmployeeToAssignment();
+
     ResponseWithPagination<List<EmployeeResponse>> getAllEmployees(
         int page, 
         int limit, 

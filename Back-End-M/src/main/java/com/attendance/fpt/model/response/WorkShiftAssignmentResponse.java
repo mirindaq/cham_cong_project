@@ -14,4 +14,5 @@ public class WorkShiftAssignmentResponse {
     private Long employeeId;
     private String employeeName;
     private String employeeDepartmentName;
+    private Long attendanceId;
 } 

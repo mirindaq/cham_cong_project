@@ -24,4 +24,7 @@ public class LeaveRequestAddRequest {
 
     @NotNull(message = "leaveTypeId is required")
     private Long leaveTypeId;
+
+    @NotNull(message = "workShiftId is required")
+    private Long workShiftId;
 }

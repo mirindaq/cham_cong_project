@@ -2,6 +2,7 @@ package com.attendance.fpt.repositories;
 
 import com.attendance.fpt.entity.Employee;
 import com.attendance.fpt.entity.WorkShiftAssignment;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -49,7 +50,10 @@ public interface WorkShiftAssignmentRepository extends JpaRepository<WorkShiftAs
             "AND (:workShiftId IS NULL OR ws.id = :workShiftId) " +
             "AND (:departmentId IS NULL OR e.department.id = :departmentId) " +
             "AND EXTRACT(MONTH FROM wa.dateAssign) = :month " +
-            "AND EXTRACT(YEAR FROM wa.dateAssign) = :year")
+            "AND EXTRACT(YEAR FROM wa.dateAssign) = :year " +
+            "AND wa.dateAssign IS NOT NULL " +
+            "AND ws.startTime IS NOT NULL " +
+            "ORDER BY wa.dateAssign ASC, ws.startTime ASC")
     List<WorkShiftAssignment> filterAssignments(
             @Param("employeeId") Long employeeId,
             @Param("workShiftId") Long workShiftId,
@@ -57,4 +61,8 @@ public interface WorkShiftAssignmentRepository extends JpaRepository<WorkShiftAs
             @Param("year") Long year,
             @Param("departmentId") Long departmentId
     );
-} 
+
+    List<WorkShiftAssignment> findByEmployee_IdAndDateAssignBetweenAndWorkShift_IdAndAttendanceIsNull(Long employeeId, LocalDate startDate, LocalDate endDate, Long workShiftId);
+
+    List<WorkShiftAssignment> findByEmployeeAndDateAssignAfter(Employee employee, LocalDate dateAssign, Sort assign);
+}

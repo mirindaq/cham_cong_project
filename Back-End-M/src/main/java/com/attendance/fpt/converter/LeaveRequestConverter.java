@@ -19,6 +19,7 @@ public class LeaveRequestConverter {
                 .departmentName(leaveRequest.getEmployee().getDepartment() != null ? leaveRequest.getEmployee().getDepartment().getName() : null)
                 .status(leaveRequest.getStatus())
                 .createdAt(leaveRequest.getCreatedAt())
+                .workShift(leaveRequest.getWorkShift() != null ? WorkShiftConverter.toResponse(leaveRequest.getWorkShift()) : null)
                 .build();
     }
 

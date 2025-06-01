@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -25,13 +26,32 @@ public class ComplaintsController {
     @GetMapping
     public ResponseEntity<ResponseSuccess<ResponseWithPagination<List<ComplaintResponse>>>> getAllComplaints(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String employeeName,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam( required = false) LocalDate endDate,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String complaintType,
+            @RequestParam(required = false) String status) {
+
+
+        ResponseWithPagination<List<ComplaintResponse>> result = complaintsService.getAllComplaints(
+                page,
+                size,
+                employeeName,
+                startDate,
+                endDate,
+                departmentId,
+                complaintType,
+                status);
+
         return ResponseEntity.ok(new ResponseSuccess<>(
                 HttpStatus.OK,
                 "Get all complaint success",
-                complaintsService.getAllComplaints(page, size)
+                result
         ));
     }
+
 
     @GetMapping("/employee/{employeeId}")
     public ResponseEntity<ResponseSuccess<ResponseWithPagination<List<ComplaintResponse>>>> getAllComplaintsByEmployee(
