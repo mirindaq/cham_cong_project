@@ -28,6 +28,7 @@ public class LeaveBalanceConverter {
                 .leaveType(leaveBalance.getLeaveType() != null
                         ? LeaveTypeConverter.toResponse(leaveBalance.getLeaveType())
                         : null)
+                .employeeEmail(leaveBalance.getEmployee().getEmail())
                 .build();
     }
 }

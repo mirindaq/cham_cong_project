@@ -141,6 +141,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         String username = jwtUtil.getUserNameFromJwtToken(refreshToken, TokenType.REFRESH_TOKEN);
+
         Account account = accountRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 

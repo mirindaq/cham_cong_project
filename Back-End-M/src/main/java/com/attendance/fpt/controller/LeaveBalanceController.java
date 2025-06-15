@@ -38,6 +38,9 @@ public class LeaveBalanceController {
             @RequestParam(required = false, defaultValue = "10") int limit
 
     ) {
+        if ( year == null ){
+            year = (long) LocalDate.now().getYear();
+        }
         return ResponseEntity.ok(new ResponseSuccess<>(
                 HttpStatus.OK,
                 "Get all leave balance success",

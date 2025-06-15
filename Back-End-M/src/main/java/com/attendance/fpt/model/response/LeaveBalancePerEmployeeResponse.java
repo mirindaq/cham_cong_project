@@ -14,5 +14,6 @@ public class LeaveBalancePerEmployeeResponse {
     private Integer remainingDay;
     private String employeeName;
     private String departmentName;
+    private String employeeEmail;
     private LeaveTypeResponse leaveType;
 }

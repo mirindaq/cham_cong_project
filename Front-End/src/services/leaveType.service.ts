@@ -21,7 +21,7 @@ export const leaveTypeApi = {
     }
   },
 
-  addLeaveType: async (newLeaveType: Omit<LeaveType, "id">) => {
+  addLeaveType: async (newLeaveType: Omit<LeaveType, "id" | "active">) => {
     const response = await http.post("/leave-types/add", newLeaveType);
     return response.data.data;
   },

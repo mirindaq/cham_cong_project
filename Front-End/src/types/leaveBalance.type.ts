@@ -6,6 +6,7 @@ export type LeaveBalancePerEmployeeResponse = {
   year: number;
   remainingDay: number;
   employeeName: string;
+  employeeEmail: string;
   departmentName: string;
   leaveType: LeaveType;
 };

@@ -186,18 +186,19 @@ export default function LeaveBalancePage() {
       id: leaveTypes.length + 1,
       name: newLeaveType.name,
       maxDayPerYear: newLeaveType.maxDayPerYear,
-      active: false
+      active: true
     };
 
     try {
       await leaveTypeApi.addLeaveType({
         name: newLeaveType.name,
         maxDayPerYear: newLeaveType.maxDayPerYear,
-        active: false
       });
       toast.success("Thêm loại nghỉ phép thành công");
       setLeaveTypes([...leaveTypes, newType]);
-      setNewLeaveType({ name: "", maxDayPerYear: 0, active: false });
+      setNewLeaveType({ name: "", maxDayPerYear: 0, active: true });
+      loadLeaveBalanceTypes();
+      loadLeaveBalances();
       setShowAddLeaveTypeDialog(false);
     } catch (error) {
       console.error("Lỗi khi thêm loại nghỉ phép:", error);
@@ -234,6 +235,8 @@ export default function LeaveBalancePage() {
       );
       setLeaveTypes(updatedTypes);
       setShowEditLeaveTypeDialog(false);
+      loadLeaveBalanceTypes();
+      loadLeaveBalances();
       resetLeaveTypeForm();
       toast.success("Cập nhật tên loại nghỉ phép thành công");
     } catch (error) {
@@ -463,6 +466,7 @@ export default function LeaveBalancePage() {
                       <TableRow className="border-b bg-muted/50">
                         <TableHead>STT</TableHead>
                         <TableHead>Nhân viên</TableHead>
+                        <TableHead>Email</TableHead>
                         <TableHead>Phòng ban</TableHead>
                         <TableHead>Năm</TableHead>
                         <TableHead>Số ngày nghỉ đã dùng</TableHead>
@@ -478,6 +482,7 @@ export default function LeaveBalancePage() {
                               {(currentPage - 1) * 10 + index + 1}
                             </TableCell>
                             <TableCell>{balance.employeeName}</TableCell>
+                            <TableCell>{balance.employeeEmail}</TableCell>
                             <TableCell>{balance.departmentName}</TableCell>
                             <TableCell>{balance.year}</TableCell>
                             <TableCell>{balance.usedDay} ngày</TableCell>

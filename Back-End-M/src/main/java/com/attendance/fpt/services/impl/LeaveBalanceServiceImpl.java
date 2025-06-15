@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -40,7 +41,11 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
     public ResponseWithPagination<List<LeaveBalancePerEmployeeResponse>> getAllLeaveBalance(String employeeName,
                                                                                        Long year, Long departmentId,String leaveBalanceType, int page, int limit) {
 
-        Pageable pageable = PageRequest.of(page - 1, limit);
+        Sort sort = Sort.by("lb.employee.fullName").ascending()
+                .and(Sort.by("lb.employee.department.id").ascending())
+                .and(Sort.by("lb.employee.email").ascending())
+                .and(Sort.by("lb.leaveType.name").ascending());
+        Pageable pageable = PageRequest.of(page - 1, limit, sort);
         Page<LeaveBalance> leaveBalances = leaveBalanceRepository.getAllLeaveBalanceByFilter( employeeName, year,
                 departmentId,leaveBalanceType ,pageable);
 

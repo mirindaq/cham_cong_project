@@ -171,6 +171,7 @@ function UsersPage() {
     if (!selectedUser) return;
     await userApi.updateUser(selectedUser.id, newUserData);
     toast.success("Cập nhật nhân viên thành công");
+    loadUsers();
     setShowEditUserDialog(false);
   };
 
