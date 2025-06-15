@@ -24,6 +24,8 @@ import { Plus, Edit, Trash, MapPin } from "lucide-react";
 import type { Location } from "@/types/location.type";
 import { locationApi } from "@/services/location.service";
 import { toast } from "sonner";
+import Spinner from "@/components/Spinner";
+import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 
 export default function LocationsPage() {
   const [showAddLocationDialog, setShowAddLocationDialog] = useState(false);
@@ -40,11 +42,23 @@ export default function LocationsPage() {
   });
 
   const [locations, setLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    locationId: number | null;
+    locationName: string;
+  }>({
+    isOpen: false,
+    locationId: null,
+    locationName: "",
+  });
 
   useEffect(() => {
     const fetchLocations = async () => {
+      setLoading(true);
       const data = await locationApi.getAllLocations();
       if (data) setLocations(data);
+      setLoading(false);
     };
     fetchLocations();
   }, []);
@@ -67,6 +81,7 @@ export default function LocationsPage() {
     if (addedLocation) {
       setShowAddLocationDialog(false);
       setLocations((prev) => [...prev, addedLocation]);
+      toast.success("Thêm địa điểm mới thành công!");
     } else {
       // Xử lý lỗi, có thể toast.error hoặc alert
     }
@@ -87,7 +102,7 @@ export default function LocationsPage() {
           location.id === editLocationId ? updatedLocation : location
         )
       );
-      alert("Cập nhật địa điểm thành công!");
+      toast.success("Cập nhật địa điểm thành công!");
       setShowEditLocationDialog(false);
       resetLocationForm();
     } else {
@@ -95,21 +110,24 @@ export default function LocationsPage() {
     }
   };
 
-  const handleDeleteLocation = async (id: number) => {
-    if (confirm("Bạn có chắc chắn muốn xóa địa điểm này không?")) {
-      try {
-        const deletedLocation = await locationApi.deleteLocation(id);
-        if (deletedLocation) {
-          const updatedLocations = locations.filter(
-            (location) => location.id !== id
-          );
-          setLocations(updatedLocations);
-          toast.success("Xóa địa điểm thành công!");
-        }
-      } catch (error: any) {
-        toast.error(error.response.data.message);
-      }
+  const handleDeleteConfirm = async () => {
+    if (deleteDialog.locationId === null) return;
+
+    const success = await locationApi.deleteLocation(deleteDialog.locationId);
+    if (success) {
+      setLocations((prev) =>
+        prev.filter((location) => location.id !== deleteDialog.locationId)
+      );
+      toast.success("Xóa địa điểm thành công!");
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialog({
+      isOpen: false,
+      locationId: null,
+      locationName: "",
+    });
   };
 
   const resetLocationForm = () => {
@@ -146,6 +164,10 @@ export default function LocationsPage() {
     const { name, value } = e.target;
     setNewLocationData((prev) => ({ ...prev, [name]: value }));
   };
+
+  if (loading) {
+    return <Spinner layout="admin" />;
+  }
 
   return (
     <AdminLayout>
@@ -216,7 +238,13 @@ export default function LocationsPage() {
                     variant="outline"
                     size="sm"
                     className="text-destructive"
-                    onClick={() => handleDeleteLocation(location.id)}
+                    onClick={() => {
+                      setDeleteDialog({
+                        isOpen: true,
+                        locationId: location.id,
+                        locationName: location.name,
+                      });
+                    }}
                   >
                     <Trash className="mr-2 h-4 w-4" />
                     Xóa
@@ -509,6 +537,15 @@ export default function LocationsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog xoá địa điểm*/}
+      <DeleteConfirmationDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        itemName={deleteDialog.locationName}
+        description="Bạn có chắc chắn muốn xóa địa điểm"
+      />
     </AdminLayout>
   );
 }

@@ -29,5 +29,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src", "../../../ProjectCV/Hanh-Chinh-Mot-Cua/Front-End/src/hooks/useQuery.tsx", "../../../ProjectCV/Hanh-Chinh-Mot-Cua/Front-End/src/hooks/useMutation.tsx"]
 }

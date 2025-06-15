@@ -1,13 +1,12 @@
 import http from "@/utils/http";
 
 export const attendanceApi = {
-  getAttendanceByEmployeeId: async (
-    employeeId: number,
+  getAttendanceByEmployee: async (
     month: number,
     year: number
   ) => {
     const response = await http.get(
-      `/attendances/employee/${employeeId}?month=${month}&year=${year}`
+      `/attendances/employee?month=${month}&year=${year}`
     );
     return response.data;
   },
@@ -20,12 +19,11 @@ export const attendanceApi = {
     return response.data;
   },
   getAllAttendances: async (params: URLSearchParams) => {
-    const response = await http.get('/attendances', { params });
+    const response = await http.get("/attendances", { params });
     return response.data;
   },
   getRecentAttendances: async () => {
-    const response = await http.get('/attendances/recent-checker');
+    const response = await http.get("/attendances/recent-checker");
     return response.data;
-  }
+  },
 };
-

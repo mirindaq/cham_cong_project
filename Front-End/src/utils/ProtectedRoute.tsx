@@ -1,4 +1,6 @@
 import { Navigate } from 'react-router';
+import { localStorageUtil } from './localStorageUtil';
+
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -6,9 +8,9 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  
-  if (!user.role || !allowedRoles.includes(user.role)) {
+  const accessToken = localStorageUtil.getAccessTokenFromLocalStorage();
+  const role = localStorageUtil.getRoleFromLocalStorage();
+  if (!accessToken || !role || !allowedRoles.includes(role)) {
     return <Navigate to="/login" replace />;
   }
 

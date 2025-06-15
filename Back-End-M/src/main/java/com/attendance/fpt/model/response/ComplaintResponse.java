@@ -18,8 +18,8 @@ public class ComplaintResponse {
     private LocalDateTime responseDate;
     private LocalDate date;
     private String responseNote;
-    private String responseByFullName;
-    private String employeeFullName;
+    private String responseBy;
+    private String employeeName;
     private String complaintType;
     private String departmentName;
     private LocalDateTime createdAt;

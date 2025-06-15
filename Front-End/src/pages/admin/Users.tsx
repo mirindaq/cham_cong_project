@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -37,7 +37,7 @@ import type { Department } from "@/types/department.type";
 import { toast } from "sonner";
 import { userApi } from "@/services/user.service";
 import { departmentApi } from "@/services/department.service";
-import type { User, UserRequest } from "@/types/user.type";
+import type { UserResponse, UserRequest } from "@/types/user.type";
 import { useSearchParams } from "react-router";
 import { isBefore, startOfDay } from "date-fns";
 import PaginationComponent from "@/components/PaginationComponent";
@@ -49,6 +49,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import Spinner from "@/components/Spinner";
 
 function UsersPage() {
   const [loading, setLoading] = useState(false);
@@ -63,7 +64,7 @@ function UsersPage() {
 
   const [showAddUserDialog, setShowAddUserDialog] = useState(false);
   const [showEditUserDialog, setShowEditUserDialog] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserResponse | null>(null);
   const [newUserData, setNewUserData] = useState<UserRequest>({
     fullName: "",
     email: "",
@@ -78,11 +79,12 @@ function UsersPage() {
     active: true,
   });
 
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserResponse[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPage, setTotalPage] = useState<number>(1);
+  const [totalItems, setTotalItems] = useState<number>(0);
 
   useEffect(() => {
     const name = searchParams.get("name") || "";
@@ -102,31 +104,23 @@ function UsersPage() {
     });
   }, [searchParams]);
 
-  useEffect(() => {
-    const loadUsers = async () => {
-      setLoading(true);
-      try {
-        const response = await userApi.getAllUsers(searchParams);
-        setTotalPage(response.totalPage);
-        setUsers(response.data);
-      } catch (error) {
-        console.error(error);
-        toast.error("Có lỗi xảy ra khi tải dữ liệu");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadUsers();
+  const loadUsers = useCallback(async () => {
+    const response = await userApi.getAllUsers(searchParams);
+    setTotalPage(response.totalPage);
+    setTotalItems(response.totalItem);
+    setUsers(response.data);
   }, [searchParams]);
 
   useEffect(() => {
+    setLoading(true);
+    loadUsers();
+    setLoading(false);
+  }, [loadUsers]);
+
+  useEffect(() => {
     const loadDepartments = async () => {
-      try {
-        const departments = await departmentApi.getAllDepartments();
-        setDepartments(departments);
-      } catch (error) {
-        console.error(error);
-      }
+      const departments = await departmentApi.getAllDepartments();
+      setDepartments(departments);
     };
     loadDepartments();
   }, []);
@@ -134,32 +128,23 @@ function UsersPage() {
   const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    try {
-      await userApi.addUser(newUserData);
-      toast.success("Thêm nhân viên thành công");
-
-      setShowAddUserDialog(false);
-      setNewUserData({
-        fullName: "",
-        email: "",
-        phone: "",
-        address: "",
-        departmentId: 0,
-        position: "",
-        role: "EMPLOYEE",
-        dob: "",
-        joinDate: "",
-        employeeType: "FULL_TIME",
-        active: true,
-      });
-      window.location.reload();
-    } catch (error: any) {
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        "Lỗi khi thêm người dùng";
-      toast.error(message);
-    }
+    await userApi.addUser(newUserData);
+    toast.success("Thêm nhân viên thành công");
+    setShowAddUserDialog(false);
+    setNewUserData({
+      fullName: "",
+      email: "",
+      phone: "",
+      address: "",
+      departmentId: 0,
+      position: "",
+      role: "EMPLOYEE",
+      dob: "",
+      joinDate: "",
+      employeeType: "FULL_TIME",
+      active: true,
+    });
+    loadUsers();
   };
 
   const handleFilter = () => {
@@ -184,22 +169,12 @@ function UsersPage() {
   const handleEditUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedUser) return;
-
-    try {
-      await userApi.updateUser(selectedUser.id, newUserData);
-      toast.success("Cập nhật nhân viên thành công");
-      setShowEditUserDialog(false);
-      window.location.reload();
-    } catch (error: any) {
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        "Lỗi khi cập nhật người dùng";
-      toast.error(message);
-    }
+    await userApi.updateUser(selectedUser.id, newUserData);
+    toast.success("Cập nhật nhân viên thành công");
+    setShowEditUserDialog(false);
   };
 
-  const handleOpenEditDialog = (user: User) => {
+  const handleOpenEditDialog = (user: UserResponse) => {
     setSelectedUser(user);
     setNewUserData({
       fullName: user.fullName,
@@ -216,6 +191,7 @@ function UsersPage() {
       active: user.active,
     });
     setShowEditUserDialog(true);
+    loadUsers();
   };
 
   const getStatusBadge = (active: boolean) => {
@@ -226,7 +202,7 @@ function UsersPage() {
     );
   };
 
-  const canEditUser = (user: User) => {
+  const canEditUser = (user: UserResponse) => {
     const today = startOfDay(new Date());
     const joinDate = new Date(user.joinDate);
     return isBefore(joinDate, today);
@@ -238,6 +214,10 @@ function UsersPage() {
     newParams.set("page", page.toString());
     setSearchParams(newParams);
   };
+
+  if (loading) {
+    return <Spinner layout="admin" />;
+  }
 
   return (
     <AdminLayout>
@@ -310,7 +290,7 @@ function UsersPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tất cả phòng ban</SelectItem>
-                    {departments.map((dept) => (
+                    {departments?.map((dept) => (
                       <SelectItem key={dept.id} value={dept.name}>
                         {dept.name}
                       </SelectItem>
@@ -397,19 +377,11 @@ function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="p-4 text-center">
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : users?.length > 0 ? (
-                  users.map((user) => (
+                {users?.length > 0 ? (
+                  users.map((user, index) => (
                     <TableRow key={user.id} className="border-b">
                       <TableCell className="p-2">
-                        {(currentPage - 1) * 10 + users.indexOf(user) + 1}
+                        {(currentPage - 1) * 10 + index + 1}
                       </TableCell>
                       <TableCell className="p-2">{user.fullName}</TableCell>
                       <TableCell className="p-2">{user.email}</TableCell>
@@ -447,9 +419,9 @@ function UsersPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             {canEditUser(user) ? (
-                              <DropdownMenuItem>
+                              <DropdownMenuItem asChild>
                                 <button
-                                  className="flex"
+                                  className="flex w-full items-center"
                                   onClick={() => handleOpenEditDialog(user)}
                                 >
                                   <Edit className="mr-2 h-4 w-4" />
@@ -490,7 +462,7 @@ function UsersPage() {
         </CardContent>
         <CardFooter className="flex justify-between">
           <div className="text-sm text-muted-foreground">
-            Tổng số: {users?.length || 0} người dùng
+            Tổng số: {totalItems} bản ghi
           </div>
         </CardFooter>
       </Card>
@@ -584,7 +556,7 @@ function UsersPage() {
                   <SelectValue placeholder="Chọn phòng ban" />
                 </SelectTrigger>
                 <SelectContent>
-                  {departments.map((dept) => (
+                  {departments?.map((dept) => (
                     <SelectItem key={dept.id} value={dept.id.toString()}>
                       {dept.name}
                     </SelectItem>
@@ -799,7 +771,7 @@ function UsersPage() {
                   <SelectValue placeholder="Chọn phòng ban" />
                 </SelectTrigger>
                 <SelectContent>
-                  {departments.map((dept) => (
+                  {departments?.map((dept) => (
                     <SelectItem key={dept.id} value={dept.id.toString()}>
                       {dept.name}
                     </SelectItem>

@@ -1,6 +1,5 @@
 import type { LeaveRequestAdd } from "@/types/leaveRequest.type";
 import http from "@/utils/http";
-import axios from "axios";
 
 export const leaveRequestApi = {
   getAllLeaveRequests: async (dataFilter: any) => {
@@ -11,12 +10,8 @@ export const leaveRequestApi = {
     return response.data.data;
   },
 
-  getAllLeaveRequestsByEmployee: async (
-    employeeId: number,
-    page = 1,
-    size = 3
-  ) => {
-    const response = await http.get(`/leave-requests/employee/${employeeId}`, {
+  getAllLeaveRequestsByEmployee: async (page = 1, size = 3) => {
+    const response = await http.get(`/leave-requests/employee`, {
       params: { page, size },
     });
     return response.data.data;
@@ -37,25 +32,15 @@ export const leaveRequestApi = {
     return response.data;
   },
 
-  approveLeaveRequest: async (
-    id: number,
-    responseNote: string,
-    responseById: number
-  ) => {
+  approveLeaveRequest: async (id: number, responseNote: string) => {
     const response = await http.put(`/leave-requests/${id}/approve`, {
       responseNote,
-      responseById,
     });
     return response.data;
   },
-  rejectLeaveRequest: async (
-    id: number,
-    responseNote: string,
-    responseById: number
-  ) => {
+  rejectLeaveRequest: async (id: number, responseNote: string) => {
     const response = await http.put(`/leave-requests/${id}/reject`, {
       responseNote,
-      responseById,
     });
     return response.data;
   },

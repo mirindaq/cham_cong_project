@@ -1,4 +1,5 @@
 package com.attendance.fpt.controller;
+
 import com.attendance.fpt.model.request.LocationRequest;
 import com.attendance.fpt.model.response.LocationResponse;
 import com.attendance.fpt.model.response.ResponseSuccess;
@@ -7,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +21,7 @@ public class LocationController {
     private final LocationService locationService;
 
     @GetMapping("")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<List<LocationResponse>>> getAllLocations() {
         return ResponseEntity.ok(new ResponseSuccess<>(
                 HttpStatus.OK,
@@ -28,6 +31,7 @@ public class LocationController {
     }
 
     @GetMapping("/active")
+    @PreAuthorize("hasRole( 'ROLE_EMPLOYEE')")
     public ResponseEntity<ResponseSuccess<List<LocationResponse>>> getAllLocationsActive() {
         return ResponseEntity.ok(new ResponseSuccess<>(
                 HttpStatus.OK,
@@ -37,6 +41,7 @@ public class LocationController {
     }
 
     @PostMapping("/add")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<LocationResponse>> addLocation(@Valid @RequestBody LocationRequest locationRequest) {
         return ResponseEntity.ok(new ResponseSuccess<>(
                 HttpStatus.CREATED,
@@ -46,6 +51,7 @@ public class LocationController {
     }
 
     @PutMapping("/update/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<LocationResponse>> updateLocation(
             @PathVariable Long id,
             @Valid @RequestBody LocationRequest locationRequest) {
@@ -57,6 +63,7 @@ public class LocationController {
     }
 
     @DeleteMapping("/delete/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<LocationResponse>> deleteLocation(@PathVariable Long id) {
         return ResponseEntity.ok(new ResponseSuccess<>(
                 HttpStatus.OK,

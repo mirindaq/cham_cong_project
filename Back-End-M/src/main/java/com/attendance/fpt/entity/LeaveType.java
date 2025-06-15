@@ -18,6 +18,7 @@ public class LeaveType {
     
     private String name;
     private Integer maxDayPerYear;
+    private boolean active;
     
     @OneToMany(mappedBy = "leaveType")
     private List<LeaveRequest> leaveRequests;

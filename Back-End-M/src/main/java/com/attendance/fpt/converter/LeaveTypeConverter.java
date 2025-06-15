@@ -10,6 +10,7 @@ public class LeaveTypeConverter {
         response.setId(leaveType.getId());
         response.setName(leaveType.getName());
         response.setMaxDayPerYear(leaveType.getMaxDayPerYear());
+        response.setActive(leaveType.isActive());
         return response;
     }
 }

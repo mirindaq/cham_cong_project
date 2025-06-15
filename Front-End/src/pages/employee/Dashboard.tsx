@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, AlertCircle, Clock } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -30,8 +30,6 @@ import {
   isSameMonth,
 } from "date-fns";
 import { attendanceApi } from "@/services/attendance.service";
-import { localStorageUtil } from "@/utils/localStorageUtil";
-import type { User } from "@/types/user.type";
 import type { Location } from "@/types/location.type";
 import { locationApi } from "@/services/location.service";
 import type { WorkShift } from "@/types/workShiftAssignment.type";
@@ -44,6 +42,8 @@ import {
 } from "@/components/ui/dialog";
 import { useNavigate } from "react-router";
 import { leaveBalanceApi } from "@/services/leaveBalance.service";
+import { useAuth } from "@/contexts/AuthContext";
+import Spinner from "@/components/Spinner";
 
 interface AttendanceWorkShiftResponse {
   workShifts: {
@@ -69,14 +69,11 @@ interface LeaveBalanceResponse {
 }
 
 function EmployeeDashboard() {
+  const { user } = useAuth();
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [selectedLocationId, setSelectedLocationId] = useState<string>("");
-  const [employee, setEmployee] = useState<User | null>(
-    localStorageUtil.getUserFromLocalStorage()
-  );
   const [locations, setLocations] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [, setCurrentPosition] = useState<{
     latitude: number;
@@ -104,7 +101,10 @@ function EmployeeDashboard() {
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [selectedAttendance, setSelectedAttendance] =
     useState<AttendanceWorkShiftResponse | null>(null);
-  const [leaveBalances, setLeaveBalances] = useState<LeaveBalanceResponse[]>([]);
+  const [leaveBalances, setLeaveBalances] = useState<LeaveBalanceResponse[]>(
+    []
+  );
+
   const navigate = useNavigate();
 
   const checkCurrentShift = () => {
@@ -128,13 +128,14 @@ function EmployeeDashboard() {
 
   useEffect(() => {
     const fetchLocation = async () => {
+      if (!user) return;
       const response = await locationApi.getAllLocationsActive();
       setLocations(response);
       setIsLoading(false);
     };
 
     fetchLocation();
-  }, []);
+  }, [user]);
 
   const getCurrentPosition = (): Promise<GeolocationPosition> => {
     return new Promise((resolve, reject) => {
@@ -167,9 +168,9 @@ function EmployeeDashboard() {
     const a =
       Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
       Math.cos(toRadians(lat1)) *
-        Math.cos(toRadians(lat2)) *
-        Math.sin(deltaLon / 2) *
-        Math.sin(deltaLon / 2);
+      Math.cos(toRadians(lat2)) *
+      Math.sin(deltaLon / 2) *
+      Math.sin(deltaLon / 2);
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
@@ -179,8 +180,8 @@ function EmployeeDashboard() {
   const handleCheckIn = async () => {
     setLocationError(null);
 
-    if (!employee?.id || !selectedWorkShiftId) {
-      setLocationError("Không tìm thấy thông tin nhân viên hoặc ca làm việc");
+    if (!selectedWorkShiftId) {
+      setLocationError("Không tìm thấy thông tin ca làm việc");
       return;
     }
 
@@ -213,7 +214,6 @@ function EmployeeDashboard() {
         }
 
         const response = await attendanceApi.checkIn({
-          employeeId: employee.id,
           locationId: parseInt(selectedLocationId),
           latitude,
           longitude,
@@ -224,11 +224,7 @@ function EmployeeDashboard() {
           const month = currentMonth.getMonth() + 1;
           const year = currentMonth.getFullYear();
           const attendanceResponse =
-            await attendanceApi.getAttendanceByEmployeeId(
-              employee.id,
-              month,
-              year
-            );
+            await attendanceApi.getAttendanceByEmployee(month, year);
           if (attendanceResponse.status === 200) {
             setAttendanceData(attendanceResponse.data);
           }
@@ -236,7 +232,7 @@ function EmployeeDashboard() {
       } catch (err: any) {
         setLocationError(
           err.response?.data?.message ||
-            "Có lỗi xảy ra khi check-in. Vui lòng thử lại sau."
+          "Có lỗi xảy ra khi check-in. Vui lòng thử lại sau."
         );
       }
     } catch (error) {
@@ -248,14 +244,8 @@ function EmployeeDashboard() {
   const handleCheckOut = async (attendanceId: number) => {
     setLocationError(null);
 
-    if (!employee?.id) {
-      setLocationError("Không tìm thấy thông tin nhân viên");
-      return;
-    }
-
     try {
       const response = await attendanceApi.checkOut({
-        employeeId: employee.id,
         attendanceId: attendanceId,
       });
 
@@ -263,11 +253,7 @@ function EmployeeDashboard() {
         const month = currentMonth.getMonth() + 1;
         const year = currentMonth.getFullYear();
         const attendanceResponse =
-          await attendanceApi.getAttendanceByEmployeeId(
-            employee.id,
-            month,
-            year
-          );
+          await attendanceApi.getAttendanceByEmployee(month, year);
         if (attendanceResponse.status === 200) {
           setAttendanceData(attendanceResponse.data);
           const updatedAttendance = attendanceResponse.data.find(
@@ -283,7 +269,7 @@ function EmployeeDashboard() {
       console.error("Lỗi khi check-out:", error);
       setLocationError(
         error.response?.data?.message ||
-          "Có lỗi xảy ra khi check-out. Vui lòng thử lại sau."
+        "Có lỗi xảy ra khi check-out. Vui lòng thử lại sau."
       );
     }
   };
@@ -304,31 +290,15 @@ function EmployeeDashboard() {
   // Fetch attendance data from API
   useEffect(() => {
     const fetchAttendanceData = async () => {
-      try {
-        if (!employee) {
-          setError("Không tìm thấy thông tin nhân viên");
-          return;
-        }
-        const month = currentMonth.getMonth() + 1;
-        const year = currentMonth.getFullYear();
-        const response = await attendanceApi.getAttendanceByEmployeeId(
-          employee.id,
-          month,
-          year
-        );
-        console.log(response);
-        if (response.status === 200) {
-          setAttendanceData(response.data);
-        } else {
-          setError("Không thể tải dữ liệu chấm công");
-        }
-      } catch (err) {
-        setError("Có lỗi xảy ra khi tải dữ liệu chấm công");
-      }
+      if (!user) return;
+      const month = currentMonth.getMonth() + 1;
+      const year = currentMonth.getFullYear();
+      const response = await attendanceApi.getAttendanceByEmployee(month, year);
+      setAttendanceData(response.data);
     };
 
     fetchAttendanceData();
-  }, [currentMonth, employee, locations]);
+  }, [currentMonth, locations, user]);
 
   // Update calendar data when attendance data changes
   useEffect(() => {
@@ -406,12 +376,11 @@ function EmployeeDashboard() {
     const canCheck = currentTime >= startTime && currentTime <= endTime;
     return canCheck;
   };
-
   useEffect(() => {
     const fetchLeaveBalance = async () => {
-      if (!employee?.id) return;
+      if (!user) return;
       try {
-        const response = await leaveBalanceApi.getLeaveBalanceByEmployeeId(employee.id);
+        const response = await leaveBalanceApi.getLeaveBalanceByEmployee();
         if (response.status === 200) {
           setLeaveBalances(response.data);
         }
@@ -421,35 +390,17 @@ function EmployeeDashboard() {
     };
 
     fetchLeaveBalance();
-  }, [employee]);
+  }, [user]);
 
   if (isLoading) {
-    return (
-      <EmployeeLayout>
-        <div className="flex items-center justify-center h-64">
-          <p>Đang tải...</p>
-        </div>
-      </EmployeeLayout>
-    );
-  }
-
-  if (error) {
-    return (
-      <EmployeeLayout>
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Lỗi</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      </EmployeeLayout>
-    );
+    return <Spinner layout="employee" />;
   }
 
   return (
     <EmployeeLayout>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">{employee?.fullName}</h1>
+          {/* <h1 className="text-2xl font-bold">{user?.fullName}</h1> */}
           <p className="text-muted-foreground">
             Checkin {format(currentMonth, "MM/yyyy")}
           </p>
@@ -514,25 +465,21 @@ function EmployeeDashboard() {
             const dayStyles = `
               ${isCurrentDay ? "border-2 border-primary" : "border"}
               ${!isCurrentMonth ? "bg-gray-100 opacity-60" : ""}
-              ${
-                isCurrentMonth && dayShifts.some((s) => s.status === "PRESENT")
-                  ? "bg-green-50"
-                  : ""
+              ${isCurrentMonth && dayShifts.some((s) => s.status === "PRESENT")
+                ? "bg-green-50"
+                : ""
               }
-              ${
-                isCurrentMonth && dayShifts.some((s) => s.status === "LATE")
-                  ? "bg-yellow-50"
-                  : ""
+              ${isCurrentMonth && dayShifts.some((s) => s.status === "LATE")
+                ? "bg-yellow-50"
+                : ""
               }
-              ${
-                isCurrentMonth && dayShifts.some((s) => s.status === "ABSENT")
-                  ? "bg-red-50"
-                  : ""
+              ${isCurrentMonth && dayShifts.some((s) => s.status === "ABSENT")
+                ? "bg-red-50"
+                : ""
               }
-              ${
-                isCurrentMonth && dayShifts.some((s) => s.status === "LEAVE")
-                  ? "bg-blue-50"
-                  : ""
+              ${isCurrentMonth && dayShifts.some((s) => s.status === "LEAVE")
+                ? "bg-blue-50"
+                : ""
               }
               rounded-md p-2 min-h-[100px] relative
             `;
@@ -541,9 +488,8 @@ function EmployeeDashboard() {
               <div key={index} className={dayStyles}>
                 <div className="flex justify-between items-center mb-2">
                   <div
-                    className={`text-right text-sm ${
-                      !isCurrentMonth ? "text-gray-400" : ""
-                    }`}
+                    className={`text-right text-sm ${!isCurrentMonth ? "text-gray-400" : ""
+                      }`}
                   >
                     {format(item.date, "dd/MM")}
                   </div>
@@ -558,17 +504,16 @@ function EmployeeDashboard() {
                         {dayShifts.map((shift, idx) => (
                           <div
                             key={idx}
-                            className={`text-xs p-1 rounded border-l-2 ${
-                              shift.status === "PRESENT"
+                            className={`text-xs p-1 rounded border-l-2 ${shift.status === "PRESENT"
                                 ? "bg-green-50 border-green-500"
                                 : shift.status === "LATE"
-                                ? "bg-yellow-50 border-yellow-500"
-                                : shift.status === "ABSENT"
-                                ? "bg-red-50 border-red-500"
-                                : shift.status === "LEAVE"
-                                ? "bg-blue-50 border-blue-500"
-                                : "bg-gray-50 border-gray-500"
-                            }`}
+                                  ? "bg-yellow-50 border-yellow-500"
+                                  : shift.status === "ABSENT"
+                                    ? "bg-red-50 border-red-500"
+                                    : shift.status === "LEAVE"
+                                      ? "bg-blue-50 border-blue-500"
+                                      : "bg-gray-50 border-gray-500"
+                              }`}
                           >
                             <div className="flex items-center justify-between mb-1">
                               <span className="font-medium">
@@ -579,23 +524,23 @@ function EmployeeDashboard() {
                                   shift.status === "PRESENT"
                                     ? "bg-green-500"
                                     : shift.status === "LATE"
-                                    ? "bg-yellow-500 text-black"
-                                    : shift.status === "ABSENT"
-                                    ? "bg-red-500"
-                                    : shift.status === "LEAVE"
-                                    ? "bg-blue-500"
-                                    : "bg-gray-500"
+                                      ? "bg-yellow-500 text-black"
+                                      : shift.status === "ABSENT"
+                                        ? "bg-red-500"
+                                        : shift.status === "LEAVE"
+                                          ? "bg-blue-500"
+                                          : "bg-gray-500"
                                 }
                               >
                                 {shift.status === "PRESENT"
                                   ? "Có mặt"
                                   : shift.status === "LATE"
-                                  ? "Đi muộn"
-                                  : shift.status === "ABSENT"
-                                  ? "Vắng mặt"
-                                  : shift.status === "LEAVE"
-                                  ? "Nghỉ phép"
-                                  : "Chưa chấm công"}
+                                    ? "Đi muộn"
+                                    : shift.status === "ABSENT"
+                                      ? "Vắng mặt"
+                                      : shift.status === "LEAVE"
+                                        ? "Nghỉ phép"
+                                        : "Chưa chấm công"}
                               </Badge>
                             </div>
                             <div className="text-muted-foreground">
@@ -689,8 +634,8 @@ function EmployeeDashboard() {
                 <SelectContent>
                   {todayShifts.map((shift) => {
                     const isDisabled =
-                      shift.checkIn !== null || 
-                      isShiftExpired(shift) || 
+                      shift.checkIn !== null ||
+                      isShiftExpired(shift) ||
                       shift.status === "LEAVE";
                     const isExpired = isShiftExpired(shift);
                     const isCheckedIn = shift.checkIn !== null;
@@ -713,10 +658,10 @@ function EmployeeDashboard() {
                               {isCheckedIn
                                 ? "(Đã chấm công)"
                                 : isExpired
-                                ? "(Đã quá giờ)"
-                                : isOnLeave
-                                ? "(Đã nghỉ phép)"
-                                : ""}
+                                  ? "(Đã quá giờ)"
+                                  : isOnLeave
+                                    ? "(Đã nghỉ phép)"
+                                    : ""}
                             </span>
                           )}
                         </div>
@@ -871,19 +816,19 @@ function EmployeeDashboard() {
                         selectedAttendance.status === "PRESENT"
                           ? "bg-green-500"
                           : selectedAttendance.status === "LATE"
-                          ? "bg-yellow-500 text-black"
-                          : selectedAttendance.status === "ABSENT"
-                          ? "bg-red-500"
-                          : "bg-blue-500"
+                            ? "bg-yellow-500 text-black"
+                            : selectedAttendance.status === "ABSENT"
+                              ? "bg-red-500"
+                              : "bg-blue-500"
                       }
                     >
                       {selectedAttendance.status === "PRESENT"
                         ? "Có mặt"
                         : selectedAttendance.status === "LATE"
-                        ? "Đi muộn"
-                        : selectedAttendance.status === "ABSENT"
-                        ? "Vắng mặt"
-                        : "Nghỉ phép"}
+                          ? "Đi muộn"
+                          : selectedAttendance.status === "ABSENT"
+                            ? "Vắng mặt"
+                            : "Nghỉ phép"}
                     </Badge>
                   </div>
                 </div>

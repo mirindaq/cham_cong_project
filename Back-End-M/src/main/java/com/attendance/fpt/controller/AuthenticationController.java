@@ -1,10 +1,6 @@
 package com.attendance.fpt.controller;
 
-import com.attendance.fpt.model.request.ChangePasswordFirstLoginRequest;
-import com.attendance.fpt.model.request.ChangePasswordRequest;
-import com.attendance.fpt.model.request.ForgotPasswordRequest;
-import com.attendance.fpt.model.request.LoginRequest;
-import com.attendance.fpt.model.response.EmployeeResponse;
+import com.attendance.fpt.model.request.*;
 import com.attendance.fpt.model.response.LoginResponse;
 import com.attendance.fpt.model.response.ResponseSuccess;
 import com.attendance.fpt.services.AuthenticationService;
@@ -12,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,7 +22,7 @@ public class AuthenticationController {
     private final AuthenticationService authenticationService;
 
     @PostMapping("/login")
-    public ResponseEntity<ResponseSuccess<EmployeeResponse>> login(@Valid @RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<ResponseSuccess<LoginResponse>> login(@Valid @RequestBody LoginRequest loginRequest) {
         return ResponseEntity.ok(new ResponseSuccess<>(
                 HttpStatus.OK,
                 "Login Success",
@@ -34,6 +31,7 @@ public class AuthenticationController {
     }
 
     @PostMapping("/change-password")
+    @PreAuthorize("hasAnyRole('ROLE_EMPLOYEE', 'ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<?>> changePassword(@Valid @RequestBody ChangePasswordRequest changePasswordRequest) {
         authenticationService.changePassword(changePasswordRequest);
         return ResponseEntity.ok(new ResponseSuccess<>(
@@ -61,4 +59,26 @@ public class AuthenticationController {
                 null
         ));
     }
+
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<ResponseSuccess<LoginResponse>> refresh(@RequestBody RefreshTokenRequest refreshTokenRequest) {
+        return ResponseEntity.ok(new ResponseSuccess<>(
+                HttpStatus.OK,
+                "Login Success",
+                authenticationService.refreshToken(refreshTokenRequest.getRefreshToken())
+        ));
+    }
+
+    @PostMapping("/logout")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ResponseSuccess<?>> logout(@RequestBody LogoutRequest logoutRequest) {
+        authenticationService.logout(logoutRequest.getAccessToken());
+        return ResponseEntity.ok(new ResponseSuccess<>(
+                HttpStatus.OK,
+                "Logout Success",
+               null));
+    }
+
+
 } 

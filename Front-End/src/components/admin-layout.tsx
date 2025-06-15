@@ -1,9 +1,9 @@
-import type React from "react"
+import type React from "react";
 
-import { useState, type ReactNode } from "react"
-import { Link, useLocation } from "react-router"
-import { Button } from "./ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
+import { useState, type ReactNode } from "react";
+import { Link, useLocation } from "react-router";
+import { Button } from "./ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,55 +11,59 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu"
-import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet"
+} from "./ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import {
   LayoutDashboard,
   Users,
   MapPin,
   FileText,
-  Settings,
   LogOut,
   Menu,
   CheckCircle,
   ClipboardCheck,
   User,
-} from "lucide-react"
-import { localStorageUtil } from "@/utils/localStorageUtil"
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AdminLayoutProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 interface NavigationItem {
-  name: string
-  href: string
-  icon: React.ElementType
+  name: string;
+  href: string;
+  icon: React.ElementType;
 }
 
 export function AdminLayout({ children }: AdminLayoutProps) {
-  const location = useLocation()
-  const pathname = location.pathname
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false)
+  const location = useLocation();
+  const pathname = location.pathname;
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const { logout, user } = useAuth();
   const navigation: NavigationItem[] = [
     { name: "Tổng quan", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Nhân viên", href: "/admin/users", icon: Users },
     { name: "Phòng ban", href: "/admin/departments", icon: Users },
-    { name: "Phân công ca làm việc", href: "/admin/shiff-assignment", icon: Users },
+    {
+      name: "Phân công ca làm việc",
+      href: "/admin/shiff-assignment",
+      icon: Users,
+    },
     { name: "Vị trí", href: "/admin/locations", icon: MapPin },
     { name: "Phê duyệt", href: "/admin/approvals", icon: ClipboardCheck },
-    { name: "Quản lý số ngày nghỉ phép", href: "/admin/leave-balance", icon: Users },
+    {
+      name: "Quản lý số ngày nghỉ phép",
+      href: "/admin/leave-balance",
+      icon: Users,
+    },
     { name: "Chấm công", href: "/admin/attendances", icon: Users },
     { name: "Báo cáo", href: "/admin/reports", icon: FileText },
     { name: "Hồ sơ cá nhân", href: "/admin/profile", icon: User },
-
-    // { name: "Settings", href: "/admin/settings", icon: Settings },
-
-  ]
-
+  ];
   const isActive = (path: string): boolean => {
-    return pathname === path
-  }
+    return pathname === path;
+  };
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -79,8 +83,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                     <Link
                       key={item.name}
                       to={item.href}
-                      className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${isActive(item.href) ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                        }`}
+                      className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
+                        isActive(item.href)
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted"
+                      }`}
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <item.icon className="h-5 w-5" />
@@ -100,13 +107,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Admin" />
+                    <AvatarImage
+                      src="/placeholder.svg?height=32&width=32"
+                      alt="Admin"
+                    />
                     <AvatarFallback>AD</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>{localStorageUtil.getUserFromLocalStorage()?.fullName}</DropdownMenuLabel>
+                <DropdownMenuLabel>{user?.fullName}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {/* <DropdownMenuItem asChild>
                   <Link to="/admin/settings">
@@ -116,12 +126,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 </DropdownMenuItem> */}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/login" onClick={() => {
-                    localStorageUtil.removeUserFromLocalStorage();
-                  }}>
+                  <div
+                    onClick={() => {
+                      logout();
+                    }}
+                  >
                     <LogOut className="mr-2 h-4 w-4" />
                     Logout
-                  </Link>
+                  </div>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -135,8 +147,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${isActive(item.href) ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                  }`}
+                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
+                  isActive(item.href)
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-muted"
+                }`}
               >
                 <item.icon className="h-5 w-5" />
                 {item.name}
@@ -147,5 +162,5 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>
     </div>
-  )
+  );
 }

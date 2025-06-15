@@ -10,8 +10,6 @@ import java.time.LocalDate;
 @Getter
 @Setter
 public class ComplaintAddRequest {
-    @NotNull
-    private Long employeeId;
 
     @NotBlank(message = "reason is required")
     private String reason;

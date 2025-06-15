@@ -11,14 +11,34 @@ export const leaveTypeApi = {
       return null;
     }
   },
+  getAllLeaveTypesActive: async () => {
+    try {
+      const response = await http.get("/leave-types/active");
+      return response.data.data;
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách loại nghỉ phép:", error);
+      return null;
+    }
+  },
 
   addLeaveType: async (newLeaveType: Omit<LeaveType, "id">) => {
     const response = await http.post("/leave-types/add", newLeaveType);
     return response.data.data;
   },
 
-  getLeaveTypeEnableInYear: async (employeeId: number) => {
-    const response = await http.get(`/leave-types/employee/${employeeId}`);
+  getLeaveTypeEnableInYear: async () => {
+    const response = await http.get(`/leave-types/employee`);
     return response.data.data;
   },
+
+  updateLeaveType: async (leaveTypeId: number, leaveTypeUpdateRequest: any) => {
+    const response = await http.put(`/leave-types/update/${leaveTypeId}`, leaveTypeUpdateRequest);
+    return response.data.data;
+  },
+
+  toggleApply: async (leaveTypeId: number) => {
+    const response = await http.put(`/leave-types/update/${leaveTypeId}/status`);
+    return response.data.data;
+  },
+
 };

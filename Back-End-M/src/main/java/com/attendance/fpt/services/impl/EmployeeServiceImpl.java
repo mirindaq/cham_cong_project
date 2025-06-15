@@ -15,10 +15,12 @@ import com.attendance.fpt.model.response.EmployeeResponse;
 import com.attendance.fpt.model.response.ResponseWithPagination;
 import com.attendance.fpt.repositories.*;
 import com.attendance.fpt.services.EmployeeService;
+import com.attendance.fpt.utils.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +36,8 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final AccountRepository accountRepository;
     private final LeaveBalanceRepository leaveBalanceRepository;
     private final LeaveTypeRepository leaveTypeRepository;
+    private final SecurityUtil securityUtil;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
@@ -67,7 +71,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         Account account = Account.builder()
                 .username(employeeAddRequest.getEmail())
-                .password("1111")
+                .password(passwordEncoder.encode("1111"))
                 .employee(employee)
                 .role(Role.valueOf(employeeAddRequest.getRole()))
                 .firstLogin(true)
@@ -131,9 +135,9 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
-    public EmployeeResponse updateProfile(Long employeeId, EmployeeProfileRequest employeeProfileRequest) {
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+    public EmployeeResponse updateProfile( EmployeeProfileRequest employeeProfileRequest) {
+        Employee employee = securityUtil.getCurrentUser();
+
         if (!employee.getPhone().equals(employeeProfileRequest.getPhone()) && employeeRepository.existsByPhone(employeeProfileRequest.getPhone())) {
             throw new ConflictException("Phone already exists");
         }
@@ -185,9 +189,8 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
-    public EmployeeResponse getEmployeeById(Long employeeId) {
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+    public EmployeeResponse getProfile() {
+        Employee employee = securityUtil.getCurrentUser();
         return EmployeeConverter.toResponse(employee);
     }
 

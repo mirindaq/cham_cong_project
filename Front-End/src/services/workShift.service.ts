@@ -24,11 +24,15 @@ export const workShiftApi = {
     await http.delete(`/work-shifts/delete/${shiftId}`);
   },
   getWorkShiftsByEmployeeIdBetweenDate: async (
-    employeeId: number,
     startDate: string,
     endDate: string
   ) => {
-    const response = await http.get(`/work-shifts/employee/${employeeId}`, {
+    console.log(
+      "Fetching work shifts for employee between dates:",
+      startDate,
+      endDate
+    );
+    const response = await http.get(`/work-shifts/employee`, {
       params: { startDate, endDate },
     });
     return response.data.data;

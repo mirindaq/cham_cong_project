@@ -8,7 +8,11 @@ import com.attendance.fpt.model.response.EmployeeResponse;
 import com.attendance.fpt.model.response.LoginResponse;
 
 public interface AuthenticationService {
-    EmployeeResponse login(LoginRequest loginRequest);
+    LoginResponse login(LoginRequest loginRequest);
+
+    LoginResponse refreshToken(String refreshToken);
+
+    void logout(String accessToken);
 
     void resetPassword(ForgotPasswordRequest forgotPasswordRequest);
 

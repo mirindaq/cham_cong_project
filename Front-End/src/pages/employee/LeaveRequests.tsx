@@ -31,14 +31,12 @@ import { EmployeeLayout } from "@/components/employee-layout";
 import { Input } from "@/components/ui/input";
 import { leaveTypeApi } from "@/services/leaveType.service";
 import { toast } from "sonner";
-import type { User } from "@/types/user.type";
 import {
   LeaveRequestStatus,
   type LeaveRequestAdd,
   type LeaveRequestResponse,
 } from "@/types/leaveRequest.type";
 import { leaveRequestApi } from "@/services/leaveRequest.service";
-import { localStorageUtil } from "@/utils/localStorageUtil";
 import PaginationComponent from "@/components/PaginationComponent";
 import type { WorkShift } from "@/types/workShiftAssignment.type";
 import { workShiftApi } from "@/services/workShift.service";
@@ -47,7 +45,6 @@ import {
   Dialog,
   DialogContent,
   DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
@@ -58,6 +55,8 @@ import {
   FileText,
   Clock,
   AlertCircle,
+  ClipboardPaste,
+  Eye,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -65,6 +64,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router";
+import Spinner from "@/components/Spinner";
 
 function LeaveRequestsPage() {
   const [leaveType, setLeaveType] = useState("");
@@ -73,9 +75,7 @@ function LeaveRequestsPage() {
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState<boolean>(false);
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
-  const [user, setUser] = useState<User>(
-    localStorageUtil.getUserFromLocalStorage()
-  );
+
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequestResponse[]>(
     []
   );
@@ -86,6 +86,7 @@ function LeaveRequestsPage() {
   const [loadingShifts, setLoadingShifts] = useState<boolean>(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<any>(null);
+  const { user, accessToken } = useAuth();
 
   useEffect(() => {
     const loadShifts = async () => {
@@ -95,32 +96,28 @@ function LeaveRequestsPage() {
           setShifts([]);
           return;
         }
+        console.log("sjo");
         const response =
           await workShiftApi.getWorkShiftsByEmployeeIdBetweenDate(
-            user.id,
             format(startDate, "yyyy-MM-dd"),
             format(endDate, "yyyy-MM-dd")
           );
         setShifts(response);
       } catch (error) {
-        console.error(error);
-        toast.error("Có lỗi xảy ra khi tải dữ liệu ca làm");
       } finally {
         setLoadingShifts(false);
       }
     };
     loadShifts();
-  }, [user, startDate, endDate]);
+  }, [accessToken, startDate, endDate]);
 
   useEffect(() => {
     const loadLeaveTypes = async () => {
       setLoading(true);
       try {
-        const response = await leaveTypeApi.getLeaveTypeEnableInYear(user.id);
+        const response = await leaveTypeApi.getLeaveTypeEnableInYear();
         setLeaveTypes(response);
       } catch (error) {
-        console.error(error);
-        toast.error("Có lỗi xảy ra khi tải dữ liệu");
       } finally {
         setLoading(false);
       }
@@ -132,24 +129,21 @@ function LeaveRequestsPage() {
     setLoading(true);
     try {
       const response = await leaveRequestApi.getAllLeaveRequestsByEmployee(
-        user.id,
         currentPage,
         3
       );
       setLeaveRequests(response.data);
       setTotalPage(response.totalPage);
     } catch (error) {
-      console.error(error);
-      toast.error("Có lỗi xảy ra khi tải dữ liệu");
     } finally {
       setLoading(false);
     }
-  }, [user, currentPage]);
+  }, [accessToken, currentPage]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!accessToken) return;
     loadLeaveRequests();
-  }, [user, loadLeaveRequests]);
+  }, [accessToken, loadLeaveRequests]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -163,36 +157,23 @@ function LeaveRequestsPage() {
       return;
     }
 
-    if (!user) {
-      toast.error("User chưa đăng nhập!");
-      return;
-    }
 
     const newLeaveRequest: LeaveRequestAdd = {
-      employeeId: user.id,
       startDate,
       endDate,
       reason,
       leaveTypeId: Number.parseInt(leaveType),
-      workShiftId: Number.parseInt(selectedShift)
+      workShiftId: Number.parseInt(selectedShift),
     };
 
-    try {
-      await leaveRequestApi.createLeaveRequest(newLeaveRequest);
-      toast.success("Đăng ký giấy nghỉ phép thành công");
-      setLeaveType("");
-      setStartDate(undefined);
-      setEndDate(undefined);
-      setReason("");
-      setSelectedShift("");
-      loadLeaveRequests();
-    } catch (error: any) {
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        "Lỗi khi thêm ngày nghỉ phép";
-      toast.error(message);
-    }
+    await leaveRequestApi.createLeaveRequest(newLeaveRequest);
+    toast.success("Đăng ký giấy nghỉ phép thành công");
+    setLeaveType("");
+    setStartDate(undefined);
+    setEndDate(undefined);
+    setReason("");
+    setSelectedShift("");
+    loadLeaveRequests();
   };
 
   const getStatusBadge = (status: LeaveRequestStatus) => {
@@ -221,8 +202,8 @@ function LeaveRequestsPage() {
     }
   };
 
-  if (!loading) {
-    <div>Đang tải </div>;
+  if (loading) {
+    return <Spinner layout="employee" />;
   }
 
   const onPageChange = (page: number) => {
@@ -235,10 +216,7 @@ function LeaveRequestsPage() {
         await leaveRequestApi.recallLeaveRequest(id);
         toast.success("Đã thu hồi đơn thành công!");
         loadLeaveRequests();
-      } catch (error) {
-        console.error("Lỗi khi thu hồi đơn:", error);
-        toast.error("Thu hồi đơn không thành công. Vui lòng thử lại.");
-      }
+      } catch (error) {}
     }
   };
 
@@ -410,15 +388,13 @@ function LeaveRequestsPage() {
                         key={request.id}
                         className="border-b hover:bg-muted/50"
                       >
-                        <TableCell className="p-3">
+                        <TableCell>
                           {leaveRequests.findIndex(
                             (req) => req.id === request.id
                           ) + 1}
                         </TableCell>
-                        <TableCell className="p-3">
-                          {request.leaveType.name}
-                        </TableCell>
-                        <TableCell className="p-3">
+                        <TableCell>{request.leaveType.name}</TableCell>
+                        <TableCell>
                           {request.createdAt
                             ? format(
                                 parseISO(request.createdAt),
@@ -426,21 +402,21 @@ function LeaveRequestsPage() {
                               )
                             : "N/A"}
                         </TableCell>
-                        <TableCell className="p-3">
+                        <TableCell>
                           {request.startDate
                             ? format(parseISO(request.startDate), "dd/MM/yyyy")
                             : "N/A"}
                         </TableCell>
-                        <TableCell className="p-3">
+                        <TableCell>
                           {request.endDate
                             ? format(parseISO(request.endDate), "dd/MM/yyyy")
                             : "N/A"}
                         </TableCell>
-                        <TableCell className="p-3">
+                        <TableCell>
                           {getStatusBadge(request.status as LeaveRequestStatus)}
                         </TableCell>
-                        <TableCell className="p-3">{request.reason}</TableCell>
-                        <TableCell className="p-3">
+                        <TableCell>{request.reason}</TableCell>
+                        <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button size="icon" variant="ghost">
@@ -454,12 +430,14 @@ function LeaveRequestsPage() {
                                   setShowDetailModal(true);
                                 }}
                               >
+                                <Eye width={20} className="mr-2" />
                                 Xem chi tiết
                               </DropdownMenuItem>
                               {request.status === "PENDING" && (
                                 <DropdownMenuItem
                                   onClick={() => handleRecall(request.id)}
                                 >
+                                  <ClipboardPaste width={20} className="mr-2" />
                                   Thu hồi
                                 </DropdownMenuItem>
                               )}
@@ -494,10 +472,12 @@ function LeaveRequestsPage() {
         <DialogContent className="min-w-[800px] max-h-[90vh] overflow-y-auto p-0">
           <div className="bg-white rounded-lg shadow-lg">
             <div className="flex items-center justify-between px-6 pt-6 pb-2 border-b">
-              <div className="flex items-center gap-2">
+              <DialogTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5" />
-                <span className="text-base font-semibold">Chi tiết phiếu nghỉ phép</span>
-              </div>
+                <span className="text-base font-semibold">
+                  Chi tiết phiếu nghỉ phép
+                </span>
+              </DialogTitle>
               {getStatusBadge(selectedDetail?.status)}
             </div>
 
@@ -507,13 +487,21 @@ function LeaveRequestsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-2">
                     <UserIcon className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Họ tên:</span>
-                    <span className="text-sm font-medium">{selectedDetail.employeeName}</span>
+                    <span className="text-sm text-muted-foreground">
+                      Họ tên:
+                    </span>
+                    <span className="text-sm font-medium">
+                      {selectedDetail.employeeName}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Building className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Bộ phận:</span>
-                    <span className="text-sm font-medium">{selectedDetail.departmentName}</span>
+                    <span className="text-sm text-muted-foreground">
+                      Bộ phận:
+                    </span>
+                    <span className="text-sm font-medium">
+                      {selectedDetail.departmentName}
+                    </span>
                   </div>
                 </div>
 
@@ -521,23 +509,51 @@ function LeaveRequestsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Loại nghỉ phép:</span>
-                    <span className="text-sm font-medium">{selectedDetail.leaveType?.name}</span>
+                    <span className="text-sm text-muted-foreground">
+                      Loại nghỉ phép:
+                    </span>
+                    <span className="text-sm font-medium">
+                      {selectedDetail.leaveType?.name}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Ngày tạo:</span>
-                    <span className="text-sm font-medium">{selectedDetail.createdAt ? format(parseISO(selectedDetail.createdAt), "dd/MM/yyyy HH:mm:ss") : "N/A"}</span>
+                    <span className="text-sm text-muted-foreground">
+                      Ngày tạo:
+                    </span>
+                    <span className="text-sm font-medium">
+                      {selectedDetail.createdAt
+                        ? format(
+                            parseISO(selectedDetail.createdAt),
+                            "dd/MM/yyyy HH:mm:ss"
+                          )
+                        : "N/A"}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Từ ngày:</span>
-                    <span className="text-sm font-medium">{selectedDetail.startDate ? format(parseISO(selectedDetail.startDate), "dd/MM/yyyy") : "N/A"}</span>
+                    <span className="text-sm text-muted-foreground">
+                      Từ ngày:
+                    </span>
+                    <span className="text-sm font-medium">
+                      {selectedDetail.startDate
+                        ? format(
+                            parseISO(selectedDetail.startDate),
+                            "dd/MM/yyyy"
+                          )
+                        : "N/A"}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Đến ngày:</span>
-                    <span className="text-sm font-medium">{selectedDetail.endDate ? format(parseISO(selectedDetail.endDate), "dd/MM/yyyy") : "N/A"}</span>
+                    <span className="text-sm text-muted-foreground">
+                      Đến ngày:
+                    </span>
+                    <span className="text-sm font-medium">
+                      {selectedDetail.endDate
+                        ? format(parseISO(selectedDetail.endDate), "dd/MM/yyyy")
+                        : "N/A"}
+                    </span>
                   </div>
                 </div>
 
@@ -545,7 +561,9 @@ function LeaveRequestsPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <AlertCircle className="w-4 h-4" />
-                    <span className="text-sm text-muted-foreground font-medium">Lý do xin nghỉ:</span>
+                    <span className="text-sm text-muted-foreground font-medium">
+                      Lý do xin nghỉ:
+                    </span>
                   </div>
                   <div className="bg-gray-50 border rounded p-3 text-sm text-gray-700 whitespace-pre-line">
                     {selectedDetail.reason}
@@ -553,23 +571,37 @@ function LeaveRequestsPage() {
                 </div>
 
                 {/* Thông tin duyệt */}
-                {(selectedDetail.status === "APPROVED" || selectedDetail.status === "REJECTED") && (
+                {(selectedDetail.status === "APPROVED" ||
+                  selectedDetail.status === "REJECTED") && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <AlertCircle className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground font-medium">Thông tin duyệt:</span>
+                      <span className="text-sm text-muted-foreground font-medium">
+                        Thông tin duyệt:
+                      </span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex items-center gap-2">
                         <UserIcon className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Người duyệt:</span>
-                        <span className="text-sm font-medium">{selectedDetail.responseBy || "N/A"}</span>
+                        <span className="text-sm text-muted-foreground">
+                          Người duyệt:
+                        </span>
+                        <span className="text-sm font-medium">
+                          {selectedDetail.responseBy || "N/A"}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Ngày duyệt:</span>
+                        <span className="text-sm text-muted-foreground">
+                          Ngày duyệt:
+                        </span>
                         <span className="text-sm font-medium">
-                          {selectedDetail.responseDate ? format(parseISO(selectedDetail.responseDate), "dd/MM/yyyy HH:mm:ss") : "N/A"}
+                          {selectedDetail.responseDate
+                            ? format(
+                                parseISO(selectedDetail.responseDate),
+                                "dd/MM/yyyy HH:mm:ss"
+                              )
+                            : "N/A"}
                         </span>
                       </div>
                     </div>
@@ -577,7 +609,11 @@ function LeaveRequestsPage() {
                       <div className="flex items-center gap-2 mb-1">
                         <AlertCircle className="w-4 h-4 text-muted-foreground" />
                         <span className="text-sm text-muted-foreground font-medium">
-                          Lý do {selectedDetail.status === "APPROVED" ? "duyệt" : "từ chối"}:
+                          Lý do{" "}
+                          {selectedDetail.status === "APPROVED"
+                            ? "duyệt"
+                            : "từ chối"}
+                          :
                         </span>
                       </div>
                       <div className="bg-gray-50 border rounded p-3 text-sm text-gray-700 whitespace-pre-line">

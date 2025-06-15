@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -21,6 +22,7 @@ public class LeaveRequestController {
     private final LeaveRequestService leaveRequestService;
 
     @GetMapping()
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<ResponseWithPagination<List<LeaveRequestResponse>>>> getAllLeaveRequests(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -40,19 +42,21 @@ public class LeaveRequestController {
         ));
     }
 
-    @GetMapping("/employee/{employeeId}")
+    @GetMapping("/employee")
+    @PreAuthorize("hasRole('ROLE_EMPLOYEE')")
     public ResponseEntity<ResponseSuccess<ResponseWithPagination<List<LeaveRequestResponse>>>> getAllLeaveRequestsByEmployee(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @PathVariable Long employeeId) {
+            @RequestParam(defaultValue = "10") int size
+           ) {
         return ResponseEntity.ok(new ResponseSuccess<>(
                 HttpStatus.OK,
                 "Get all leave requests success",
-                leaveRequestService.getAllLeaveRequestsByEmployee(page, size, employeeId)
+                leaveRequestService.getAllLeaveRequestsByEmployee(page, size)
         ));
     }
 
     @PostMapping("")
+    @PreAuthorize("hasRole('ROLE_EMPLOYEE')")
     public ResponseEntity<ResponseSuccess<LeaveRequestResponse>> createLeaveRequest(@Valid @RequestBody LeaveRequestAddRequest leaveRequestAddRequest) {
         return ResponseEntity.ok(new ResponseSuccess<>(
                 HttpStatus.CREATED,
@@ -62,6 +66,7 @@ public class LeaveRequestController {
     }
 
     @PutMapping("/{id}/recall")
+    @PreAuthorize("hasRole('ROLE_EMPLOYEE')")
     public ResponseEntity<ResponseSuccess<Void>> recallLeaveRequest(@PathVariable Long id) {
         leaveRequestService.recallLeaveRequest(id);
         return ResponseEntity.ok(new ResponseSuccess<>(
@@ -73,6 +78,7 @@ public class LeaveRequestController {
 
 
     @GetMapping("/pending")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<List<LeaveRequestResponse>>> getPendingLeaveRequests() {
         return ResponseEntity.ok(new ResponseSuccess<>(
                 HttpStatus.OK,
@@ -82,6 +88,7 @@ public class LeaveRequestController {
     }
 
     @PutMapping("/{id}/approve")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<Void>> approveLeaveRequest(@PathVariable Long id,
                                                                      @RequestBody LeaveRequestHandleRequest leaveRequestHandleRequest) {
         leaveRequestService.approveLeaveRequest(id, leaveRequestHandleRequest);
@@ -94,6 +101,7 @@ public class LeaveRequestController {
 
 
     @PutMapping("/{id}/reject")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<Void>> rejectLeaveRequest(@PathVariable Long id,
                                                                     @RequestBody LeaveRequestHandleRequest leaveRequestHandleRequest) {
         leaveRequestService.rejectLeaveRequest(id, leaveRequestHandleRequest);

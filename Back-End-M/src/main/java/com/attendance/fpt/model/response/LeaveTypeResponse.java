@@ -9,4 +9,5 @@ public class LeaveTypeResponse {
     private Long id;
     private String name;
     private Integer maxDayPerYear;
+    private boolean active;
 } 

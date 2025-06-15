@@ -10,6 +10,7 @@ import com.attendance.fpt.model.request.LeaveRequestHandleRequest;
 import com.attendance.fpt.model.response.*;
 import com.attendance.fpt.repositories.*;
 import com.attendance.fpt.services.LeaveRequestService;
+import com.attendance.fpt.utils.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -34,13 +35,13 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
     private final LeaveBalanceRepository leaveBalanceRepository;
     private final AttendanceRepository attendanceRepository;
     private final WorkShiftRepository workShiftRepository;
+    private final SecurityUtil securityUtil;
 
     @Override
     @Transactional
     public LeaveRequestResponse createLeaveRequest(LeaveRequestAddRequest request) {
-        Employee employee = employeeRepository.findById(request.getEmployeeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
-        
+        Employee employee = securityUtil.getCurrentUser();
+
         LeaveType leaveType = leaveTypeRepository.findById(request.getLeaveTypeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Leave type not found"));
 
@@ -56,6 +57,22 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
 
         if (existingAssignments.isEmpty()) {
             throw new ResourceNotFoundException("No work shift assignments found for the employee during the leave period");
+        }
+
+        LeaveBalance leaveBalance = leaveBalanceRepository.findByEmployee_IdAndLeaveType_IdAndYear(
+                employee.getId(),
+                leaveType.getId(),
+                request.getStartDate().getYear()
+        ).orElseThrow(() -> new ResourceNotFoundException("Leave balance not found"));
+
+        int totalDays = (int) (request.getEndDate().toEpochDay() - request.getStartDate().toEpochDay());
+
+        if (totalDays < 0) {
+            throw new IllegalArgumentException("Start date must be before or equal end date");
+        }
+
+        if (leaveBalance.getRemainingDay() - totalDays < 0) {
+            throw new IllegalStateException("Not enough leave balance for this request");
         }
 
         LeaveRequest leaveRequest = LeaveRequest.builder()
@@ -74,8 +91,14 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
     @Override
     @Transactional
     public void recallLeaveRequest(Long id) {
+        Employee employee = securityUtil.getCurrentUser();
+
         LeaveRequest leaveRequest = leaveRequestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Leave request not found"));
+
+        if (!leaveRequest.getEmployee().getId().equals(employee.getId())) {
+            throw new IllegalStateException("You can only recall your own leave requests");
+        }
 
         if (leaveRequest.getStatus() != LeaveRequestStatus.PENDING) {
             throw new IllegalStateException("Cannot recall a non-pending leave request");
@@ -87,12 +110,11 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
 
     @Override
     @Transactional
-    public void rejectLeaveRequest(Long id,LeaveRequestHandleRequest leaveRequestHandleRequest) {
+    public void rejectLeaveRequest(Long id, LeaveRequestHandleRequest leaveRequestHandleRequest) {
         LeaveRequest leaveRequest = leaveRequestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Leave request not found"));
 
-        Employee employee = employeeRepository.findById(leaveRequestHandleRequest.getResponseById())
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+        Employee employee = securityUtil.getCurrentUser();
 
         if (leaveRequest.getStatus() != LeaveRequestStatus.PENDING) {
             throw new IllegalStateException("Cannot reject a non-pending leave request");
@@ -108,8 +130,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
     @Override
     @Transactional
     public void approveLeaveRequest(Long id, LeaveRequestHandleRequest leaveRequestHandleRequest) {
-        Employee employee = employeeRepository.findById(leaveRequestHandleRequest.getResponseById())
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+        Employee employee = securityUtil.getCurrentUser();
 
         LeaveRequest leaveRequest = leaveRequestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Leave request not found"));
@@ -131,7 +152,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
                 leaveRequest.getWorkShift().getId()
         );
 
-        if ( wss.isEmpty()){
+        if (wss.isEmpty()) {
             throw new ResourceNotFoundException("No work shift assignments found for the employee during the leave period");
         }
 
@@ -161,14 +182,15 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         }
 
         leaveBalance.setUsedDay((leaveBalance.getUsedDay() + totalDays));
-        leaveBalance.setRemainingDay( leaveBalance.getRemainingDay() - totalDays);
+        leaveBalance.setRemainingDay(leaveBalance.getRemainingDay() - totalDays);
         leaveBalanceRepository.save(leaveBalance);
     }
 
     @Override
-    public ResponseWithPagination<List<LeaveRequestResponse>> getAllLeaveRequestsByEmployee(int page, int limit, Long employeeId) {
-        Pageable pageable = PageRequest.of(page-1, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<LeaveRequest> leaveRequests = leaveRequestRepository.findAllByEmployee_Id(employeeId,pageable);
+    public ResponseWithPagination<List<LeaveRequestResponse>> getAllLeaveRequestsByEmployee(int page, int limit) {
+        Employee employee = securityUtil.getCurrentUser();
+        Pageable pageable = PageRequest.of(page - 1, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<LeaveRequest> leaveRequests = leaveRequestRepository.findAllByEmployee_Id(employee.getId(), pageable);
 
         Page<LeaveRequestResponse> responsePage = leaveRequests.map(LeaveRequestConverter::toResponse);
 
@@ -206,7 +228,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         LocalDateTime endDateTime = endDate != null ? endDate.atTime(23, 59, 59) : null;
         Page<LeaveRequest> leaveRequestPage = leaveRequestRepository.findAllWithFilters(
                 employeeName, startDateTime, endDateTime, departmentId, workShiftId,
-                leaveTypeId, status != null ?  LeaveRequestStatus.valueOf(status.toUpperCase()) : null, pageable);
+                leaveTypeId, status != null ? LeaveRequestStatus.valueOf(status.toUpperCase()) : null, pageable);
 
         List<LeaveRequestResponse> leaveRequestResponses = leaveRequestPage.getContent().stream()
                 .map(LeaveRequestConverter::toResponse)

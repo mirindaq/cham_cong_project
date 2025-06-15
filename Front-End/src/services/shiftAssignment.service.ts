@@ -2,15 +2,10 @@ import http from "@/utils/http";
 
 export const shiftAssignmentApi = {
   getAllAssignments: async (dataFilter?: any) => {
-    try {
-      const response = await http.get("/shift-assignments", {
-        params: dataFilter,
-      });
-      return response.data.data;
-    } catch (error) {
-      console.error("Lỗi khi lấy danh sách phân ca:", error);
-      return null;
-    }
+    const response = await http.get("/shift-assignments", {
+      params: dataFilter,
+    });
+    return response.data.data;
   },
 
   assignShifts: async (assignments: any[]) => {

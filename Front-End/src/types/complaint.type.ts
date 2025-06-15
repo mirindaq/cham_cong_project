@@ -5,7 +5,7 @@ export type ComplaintResponse = {
   createdAt: string;
   responseDate?: string | null;
   responseNote?: string | null;
-  responseByFullName?: string | null;
+  responseBy?: string | null;
   employeeFullName: string;
   complaintType: string;
   status: ComplaintStatus;
@@ -13,7 +13,6 @@ export type ComplaintResponse = {
 };
 
 export interface ComplaintAddRequest {
-  employeeId: number;
   reason: string;
   date: Date;
   complaintType: string;

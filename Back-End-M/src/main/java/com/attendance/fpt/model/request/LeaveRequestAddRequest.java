@@ -10,9 +10,6 @@ import java.time.LocalDate;
 @Getter
 @Setter
 public class LeaveRequestAddRequest {
-    @NotNull
-    private Long employeeId;
-
     @NotNull( message = "startDate is required")
     private LocalDate startDate;
 

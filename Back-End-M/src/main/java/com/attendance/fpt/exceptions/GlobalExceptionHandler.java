@@ -1,9 +1,9 @@
 package com.attendance.fpt.exceptions;
 
-import com.attendance.fpt.exceptions.custom.ConflictException;
-import com.attendance.fpt.exceptions.custom.ResourceNotFoundException;
+import com.attendance.fpt.exceptions.custom.*;
 import com.attendance.fpt.model.response.ResponseError;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
+import javax.naming.AuthenticationException;
 import java.util.Date;
 import java.util.List;
 
@@ -73,6 +74,45 @@ public class GlobalExceptionHandler {
                 .message(e.getMessage())
                 .build();
     }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ResponseError handleAccessDeniedException(AccessDeniedException e, WebRequest request) {
+        return ResponseError.builder()
+                .timestamp(new Date())
+                .status(HttpStatus.FORBIDDEN.value())
+                .error(HttpStatus.FORBIDDEN.getReasonPhrase())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .message("Access denied. You don't have the required role.")
+                .build();
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ResponseError handleAuthenticationException(AuthenticationException ex, WebRequest request) {
+        return ResponseError.builder()
+                .timestamp(new Date())
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .error(HttpStatus.UNAUTHORIZED.getReasonPhrase())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .message("Unauthorized or invalid token")
+                .build();
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ResponseError handleIllegalStateExceptionException(IllegalStateException ex, WebRequest request) {
+        return ResponseError.builder()
+                .timestamp(new Date())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .message(ex.getMessage())
+                .build();
+    }
+
+
+
 
 
 }

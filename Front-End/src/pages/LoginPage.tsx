@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,43 +11,29 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { authApi } from "@/services/authe.service";
-import { localStorageUtil } from "@/utils/localStorageUtil";
-import { toast } from "sonner";
+
 import ChangePasswordModal from "@/components/ChangePasswordModal";
+import { useAuth } from "@/contexts/AuthContext";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
-  const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
-  const [pendingUsername, setPendingUsername] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const {
+    login,
+    showChangePasswordModal,
+    setShowChangePasswordModal,
+    pendingUsername,
+    setPendingUsername,
+  } = useAuth();
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    try {
-      const response = await authApi.login(username, password);
-      localStorageUtil.setUserToLocalStorage(response.data);
-      if (response.data.role === "ADMIN") {
-        navigate("/admin/dashboard");
-      } else if (response.data.role === "EMPLOYEE") {
-        navigate("/employee/dashboard");
-      }
-    } catch (error: any) {
-      if (error.response.data.message.includes("change your password")) {
-        sessionStorage.setItem("pendingUsername", username);
-        setPendingUsername(username);
-        setShowChangePasswordModal(true);
-        toast.success(
-          "Đăng nhập lần đầu, vui lòng thiết lập mật khẩu để tiếp tục."
-        );
-        // Không navigate nữa!
-      } else {
-        toast.error("Tên đăng nhập hoặc mật khẩu không đúng!");
-      }
-    }
+    login(username, password);
   };
 
   return (
@@ -113,14 +98,30 @@ export default function LoginPage() {
                       Quên mật khẩu?
                     </a>
                   </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Nhập mật khẩu"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Nhập mật khẩu"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-gray-400" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-gray-400" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox

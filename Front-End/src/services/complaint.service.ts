@@ -13,11 +13,10 @@ export const complaintApi = {
   },
 
   getAllComplaintsByEmployee: async (
-    employeeId: number,
     page = 1,
     limit = 3
   ) => {
-    const response = await http.get(`/complaints/employee/${employeeId}`, {
+    const response = await http.get(`/complaints/employee`, {
       params: { page, limit },
     });
     return response.data.data;
@@ -34,6 +33,20 @@ export const complaintApi = {
   },
   getPendingComplaints: async () => {
     const response = await http.get("/complaints/pending");
+    return response.data;
+  },
+
+  approveComplaint: async (id: number, responseNote: string) => {
+    const response = await http.put(`/complaints/${id}/approve`, {
+      responseNote,
+    });
+    return response.data;
+  },
+
+  rejectComplaint: async (id: number, responseNote: string) => {
+    const response = await http.put(`/complaints/${id}/reject`, {
+      responseNote,
+    });
     return response.data;
   },
 };

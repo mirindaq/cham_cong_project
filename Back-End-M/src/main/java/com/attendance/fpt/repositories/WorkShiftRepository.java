@@ -14,8 +14,10 @@ public interface WorkShiftRepository extends JpaRepository<WorkShift, Long> {
     boolean workShiftHaveAssignments(@Param("workShiftId") Long workShiftId);
 
     @Query("SELECT wsa.workShift FROM WorkShiftAssignment wsa" +
+            " left join wsa.attendance a" +
             " WHERE wsa.employee.id = :employeeId" +
-            " AND wsa.dateAssign BETWEEN :startDate AND :endDate")
+            " AND wsa.dateAssign BETWEEN :startDate AND :endDate" +
+            " and a.id is null")
     List<WorkShift> findByEmployeeIdAndDateBetween(
         @Param("employeeId") Long employeeId,
         @Param("startDate") LocalDate startDate,

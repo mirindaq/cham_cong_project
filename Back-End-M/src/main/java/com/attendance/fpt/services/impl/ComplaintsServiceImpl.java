@@ -7,11 +7,13 @@ import com.attendance.fpt.enums.ComplaintStatus;
 import com.attendance.fpt.enums.ComplaintType;
 import com.attendance.fpt.exceptions.custom.ResourceNotFoundException;
 import com.attendance.fpt.model.request.ComplaintAddRequest;
+import com.attendance.fpt.model.request.ComplaintHandleRequest;
 import com.attendance.fpt.model.response.ComplaintResponse;
 import com.attendance.fpt.model.response.ResponseWithPagination;
 import com.attendance.fpt.repositories.ComplaintsRepository;
 import com.attendance.fpt.repositories.EmployeeRepository;
 import com.attendance.fpt.services.ComplaintsService;
+import com.attendance.fpt.utils.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -31,16 +33,16 @@ public class ComplaintsServiceImpl implements ComplaintsService {
 
     private final ComplaintsRepository complaintsRepository;
     private final EmployeeRepository employeeRepository;
+    private final SecurityUtil securityUtil;
 
     @Override
     @Transactional
     public ComplaintResponse createComplaint(ComplaintAddRequest request) {
-        Employee employee = employeeRepository.findById(request.getEmployeeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+        Employee employee = securityUtil.getCurrentUser();
 
         Complaint complaint = Complaint.builder()
                 .reason(request.getReason())
-                .date(LocalDate.now())
+                .date(request.getDate())
                 .complaintType(ComplaintType.valueOf(request.getComplaintType()))
                 .requestChange(request.getRequestChange())
                 .employee(employee)
@@ -53,8 +55,14 @@ public class ComplaintsServiceImpl implements ComplaintsService {
     @Override
     @Transactional
     public void recallComplaint(Long id) {
+        Employee employee = securityUtil.getCurrentUser();
+
         Complaint complaint = complaintsRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Complaint not found"));
+
+        if (!complaint.getEmployee().getId().equals(employee.getId())) {
+            throw new IllegalArgumentException("You can only recall your own complaints");
+        }
 
         if (complaint.getStatus() != ComplaintStatus.PENDING) {
             throw new IllegalStateException("Cannot recall a non-pending complaint");
@@ -65,9 +73,10 @@ public class ComplaintsServiceImpl implements ComplaintsService {
     }
 
     @Override
-    public ResponseWithPagination<List<ComplaintResponse>> getAllComplaintsByEmployeeId(int page, int limit, Long employeeId) {
-        Pageable pageable = PageRequest.of(page-1, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Complaint> complaints = complaintsRepository.findAllByEmployee_Id(employeeId, pageable);
+    public ResponseWithPagination<List<ComplaintResponse>> getAllComplaintsByEmployeeId(int page, int limit) {
+        Employee employee = securityUtil.getCurrentUser();
+        Pageable pageable = PageRequest.of(page - 1, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Complaint> complaints = complaintsRepository.findAllByEmployee_Id(employee.getId(), pageable);
 
         Page<ComplaintResponse> responsePage = complaints.map(ComplaintsConverter::toResponse);
 
@@ -123,6 +132,44 @@ public class ComplaintsServiceImpl implements ComplaintsService {
                 .stream()
                 .map(ComplaintsConverter::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public void approveComplaint(Long id, ComplaintHandleRequest complaintHandleRequest) {
+        Employee employee = securityUtil.getCurrentUser();
+
+        Complaint complaint = complaintsRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Complaint not found"));
+
+        if (complaint.getStatus() != ComplaintStatus.PENDING) {
+            throw new IllegalStateException("Cannot approve a non-pending complaint");
+        }
+
+        complaint.setStatus(ComplaintStatus.APPROVED);
+        complaint.setResponseNote(complaintHandleRequest.getResponseNote());
+        complaint.setResponseDate(LocalDateTime.now());
+        complaint.setResponseBy(employee);
+
+        complaintsRepository.save(complaint);
+    }
+
+    @Override
+    public void rejectComplaint(Long id, ComplaintHandleRequest complaintHandleRequest) {
+        Employee employee = securityUtil.getCurrentUser();
+
+        Complaint complaint = complaintsRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Complaint not found"));
+
+        if (complaint.getStatus() != ComplaintStatus.PENDING) {
+            throw new IllegalStateException("Cannot reject a non-pending complaint");
+        }
+
+        complaint.setStatus(ComplaintStatus.REJECTED);
+        complaint.setResponseNote(complaintHandleRequest.getResponseNote());
+        complaint.setResponseDate(LocalDateTime.now());
+        complaint.setResponseBy(employee);
+
+        complaintsRepository.save(complaint);
     }
 
 }

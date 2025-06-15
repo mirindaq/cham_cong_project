@@ -1,6 +1,7 @@
 package com.attendance.fpt.services.impl;
 
 import com.attendance.fpt.converter.WorkShiftConverter;
+import com.attendance.fpt.entity.Employee;
 import com.attendance.fpt.entity.WorkShift;
 import com.attendance.fpt.exceptions.custom.ConflictException;
 import com.attendance.fpt.exceptions.custom.ResourceNotFoundException;
@@ -8,6 +9,7 @@ import com.attendance.fpt.model.request.WorkShiftRequest;
 import com.attendance.fpt.model.response.WorkShiftResponse;
 import com.attendance.fpt.repositories.WorkShiftRepository;
 import com.attendance.fpt.services.WorkShiftService;
+import com.attendance.fpt.utils.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +23,7 @@ import java.util.stream.Collectors;
 public class WorkShiftServiceImpl implements WorkShiftService {
 
     private final WorkShiftRepository workShiftRepository;
+    private final SecurityUtil securityUtil;
 
     @Override
     public List<WorkShiftResponse> getAllWorkShifts() {
@@ -52,8 +55,10 @@ public class WorkShiftServiceImpl implements WorkShiftService {
     }
 
     @Override
-    public List<WorkShiftResponse> getWorkShiftsByEmployeeIdBetweenDate(Long employeeId, LocalDate startDate, LocalDate endDate) {
-        List<WorkShift> workShifts = workShiftRepository.findByEmployeeIdAndDateBetween(employeeId, startDate, endDate);
+    public List<WorkShiftResponse> getWorkShiftsByEmployeeBetweenDate(LocalDate startDate, LocalDate endDate) {
+        Employee employee = securityUtil.getCurrentUser();
+
+        List<WorkShift> workShifts = workShiftRepository.findByEmployeeIdAndDateBetween(employee.getId(), startDate, endDate);
 
         if (workShifts != null && !workShifts.isEmpty()) {
             return workShifts.stream()

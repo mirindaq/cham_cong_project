@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,6 +23,7 @@ public class EmployeeController {
     private final EmployeeService employeeService;
 
     @GetMapping("")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<ResponseWithPagination<List<EmployeeResponse>>>> getAllEmployee(
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "limit", defaultValue = "10") int limit,
@@ -36,18 +38,21 @@ public class EmployeeController {
     }
 
     @GetMapping("/employee-to-assignment")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<List<EmployeeResponse>>> getEmployeeToAssignment() {
         return ResponseEntity.ok(new ResponseSuccess<>(HttpStatus.OK,
                 "Get employee to assignment success", employeeService.getEmployeeToAssignment()));
     }
 
-    @GetMapping("/profile/{employeeId}")
-    public ResponseEntity<ResponseSuccess<EmployeeResponse>> getEmployeeById(@PathVariable Long employeeId) {
+    @GetMapping("/profile")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_EMPLOYEE')")
+    public ResponseEntity<ResponseSuccess<EmployeeResponse>> getProfile() {
             return ResponseEntity.ok(new ResponseSuccess<>(HttpStatus.OK,
-                    "Get employee by id success", employeeService.getEmployeeById(employeeId)));
+                    "Get employee by id success", employeeService.getProfile()));
     }
 
     @PostMapping("/add")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<EmployeeResponse>> addEmployee(@Valid @RequestBody EmployeeAddRequest employeeAddRequest) {
         return ResponseEntity.ok(new ResponseSuccess<>(HttpStatus.CREATED,
                 "Add employee success", employeeService.addEmployee(employeeAddRequest)
@@ -55,6 +60,7 @@ public class EmployeeController {
     }
 
     @PutMapping("/update/{employeeId}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<EmployeeResponse>> updateEmployee(
             @PathVariable Long employeeId,
             @Valid @RequestBody EmployeeAddRequest employeeAddRequest) {
@@ -63,18 +69,18 @@ public class EmployeeController {
         ));
     }
 
-    @PutMapping("/update-profile/{employeeId}")
+    @PutMapping("/update-profile")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ResponseSuccess<EmployeeResponse>> updateProfile(
-            @PathVariable Long employeeId,
             @Valid @RequestBody EmployeeProfileRequest employeeProfileRequest) {
         return ResponseEntity.ok(new ResponseSuccess<>(HttpStatus.OK,
-                "Update employee success", employeeService.updateProfile(employeeId, employeeProfileRequest)
+                "Update employee success", employeeService.updateProfile(employeeProfileRequest)
         ));
     }
 
     @GetMapping("/count")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<Long>> getTotalEmployees() {
-
         long count = employeeService.countEmployees();
         return ResponseEntity.ok(new ResponseSuccess<>(HttpStatus.OK, "Get employee count success", count));
     }

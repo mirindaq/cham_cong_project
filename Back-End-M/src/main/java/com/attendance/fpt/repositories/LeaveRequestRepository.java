@@ -44,4 +44,12 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
             @Param("leaveTypeId") Long leaveTypeId,
             @Param("status") LeaveRequestStatus status,
             Pageable pageable);
+
+
+    @Query("SELECT lt.name as name, count(lq) as value FROM LeaveRequest lq " +
+            "JOIN lq.leaveType lt " +
+            " GROUP BY lt" )
+    List<Object[]> getLeaveOverallStatistics();
+
+
 }

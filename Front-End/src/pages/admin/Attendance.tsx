@@ -47,6 +47,8 @@ import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import type { Attendance } from "@/types/attendance.type";
 import { attendanceApi } from "@/services/attendance.service";
+import Spinner from "@/components/Spinner";
+import PaginationComponent from "@/components/PaginationComponent";
 
 function AttendancePage() {
   const [loading, setLoading] = useState(false);
@@ -62,6 +64,9 @@ function AttendancePage() {
     useState<Attendance | null>(null);
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPage, setTotalPage] = useState<number>(1);
+  const [totalItems, setTotalItems] = useState<number>(0);
 
   useEffect(() => {
     const employeeName = searchParams.get("employeeName") || "";
@@ -77,15 +82,23 @@ function AttendancePage() {
     });
   }, []);
 
+  const onPageChange = (page: number) => {
+    setCurrentPage(page);
+    const newParams = new URLSearchParams(searchParams.toString());
+    newParams.set("page", page.toString());
+    setSearchParams(newParams);
+  };
+
   useEffect(() => {
     const loadAttendances = async () => {
       setLoading(true);
       try {
         const response = await attendanceApi.getAllAttendances(searchParams);
-        setAttendances(response.data);
+        setAttendances(response.data.data);
+        setTotalPage(response.data.totalPage);
+        setTotalItems(response.data.totalItem);
       } catch (error) {
-        console.error(error);
-        toast.error("Có lỗi xảy ra khi tải dữ liệu");
+
       } finally {
         setLoading(false);
       }
@@ -114,6 +127,7 @@ function AttendancePage() {
       PRESENT: { label: "Có mặt", className: "bg-green-500" },
       LATE: { label: "Đi muộn", className: "bg-yellow-500" },
       LEAVE: { label: "Nghỉ phép", className: "bg-blue-500" },
+      ABSENT: { label: "Vắng mặt", className: "bg-red-500" },
     };
 
     const statusInfo = statusMap[status] || {
@@ -122,6 +136,10 @@ function AttendancePage() {
     };
     return <Badge className={statusInfo.className}>{statusInfo.label}</Badge>;
   };
+
+  if (loading) {
+    return <Spinner layout="admin" />;
+  }
 
   return (
     <AdminLayout>
@@ -184,6 +202,7 @@ function AttendancePage() {
                     <SelectItem value="PRESENT">Có mặt</SelectItem>
                     <SelectItem value="LATE">Đi muộn</SelectItem>
                     <SelectItem value="LEAVE">Nghỉ phép</SelectItem>
+                    <SelectItem value="ABSENT">Vắng mặt</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -234,24 +253,14 @@ function AttendancePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
-                  <TableRow className="border-b">
-                    <TableCell colSpan={9} className="p-4 text-center">
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : attendances?.length > 0 ? (
-                  attendances.map((attendance) => (
+                {attendances?.length > 0 ? (
+                  attendances.map((attendance,index) => (
                     <TableRow
                       key={attendance.attendanceId}
                       className="border-b"
                     >
                       <TableCell className="p-2">
-                        {attendances.findIndex(
-                          (a) => a.attendanceId === attendance.attendanceId
-                        ) + 1}
+                        {(currentPage - 1) * 10 + index + 1}
                       </TableCell>
                       <TableCell className="p-2">
                         {attendance.workShifts.employeeName}
@@ -265,23 +274,23 @@ function AttendancePage() {
                         })}
                       </TableCell>
                       <TableCell className="p-2">
-                      {(() => {
-                        let checkOutDisplay = "-";
-                        if (attendance.checkIn) {
-                          checkOutDisplay = format(
-                            new Date(attendance.checkOut),
-                            "HH:mm",
-                            {
-                              locale: vi,
-                            }
+                        {(() => {
+                          let checkOutDisplay = "-";
+                          if (attendance.checkIn) {
+                            checkOutDisplay = format(
+                              new Date(attendance.checkOut),
+                              "HH:mm",
+                              {
+                                locale: vi,
+                              }
+                            );
+                          }
+                          return (
+                            <TableCell className="p-2">
+                              {checkOutDisplay}
+                            </TableCell>
                           );
-                        }
-                        return (
-                          <TableCell className="p-2">
-                            {checkOutDisplay}
-                          </TableCell>
-                        );
-                      })()}
+                        })()}
                       </TableCell>
                       {(() => {
                         let checkOutDisplay = "-";
@@ -345,10 +354,15 @@ function AttendancePage() {
               </TableBody>
             </Table>
           </div>
+          <PaginationComponent
+            currentPage={currentPage}
+            totalPage={totalPage}
+            onPageChange={onPageChange}
+          />
         </CardContent>
         <CardFooter className="flex justify-between">
           <div className="text-sm text-muted-foreground">
-            Tổng số: {attendances?.length || 0} bản ghi
+            Tổng số: {totalItems} bản ghi
           </div>
         </CardFooter>
       </Card>

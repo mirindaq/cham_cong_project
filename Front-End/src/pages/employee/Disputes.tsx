@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,8 +28,6 @@ import {
   type ComplaintAddRequest,
   type ComplaintResponse,
 } from "@/types/complaint.type";
-import { localStorageUtil } from "@/utils/localStorageUtil";
-import type { User } from "@/types/user.type";
 import { toast } from "sonner";
 import { complaintApi } from "@/services/complaint.service";
 import PaginationComponent from "@/components/PaginationComponent";
@@ -41,6 +39,31 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useAuth } from "@/contexts/AuthContext";
+import Spinner from "@/components/Spinner";
+import {
+  AlertCircle,
+  Building,
+  Calendar,
+  ClipboardPaste,
+  Clock,
+  Eye,
+  FileText,
+  MoreHorizontal,
+  UserIcon,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 function DisputesPage() {
   const [disputeDate, setDisputeDate] = useState<Date | undefined>(undefined);
@@ -49,42 +72,44 @@ function DisputesPage() {
   const [requestedChange, setRequestedChange] = useState("");
   const [reason, setReason] = useState("");
   const [complaints, setComplaints] = useState<ComplaintResponse[]>([]);
-  const [user, setUser] = useState<User>(
-    localStorageUtil.getUserFromLocalStorage()
-  );
+
   const [loading, setLoading] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPage, setTotalPage] = useState<number>(1);
+  const { user, accessToken } = useAuth();
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedDetail, setSelectedDetail] = useState<any>(null);
 
   const loadComplaints = useCallback(async () => {
     setLoading(true);
+  
     try {
       const response = await complaintApi.getAllComplaintsByEmployee(
-        user.id,
         currentPage,
         3
       );
       setComplaints(response.data);
       setTotalPage(response.totalPage);
     } catch (error) {
-      console.error(error);
-      toast.error("Có lỗi xảy ra khi tải dữ liệu khiếu nại");
     } finally {
       setLoading(false);
     }
-  }, [user, currentPage]);
+  }, [accessToken, currentPage]);
 
   useEffect(() => {
-    if (user && user.id) {
+    if (accessToken) {
       loadComplaints();
     }
-  }, [user, loadComplaints]);
+  }, [accessToken, loadComplaints]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!accessToken) {
+      toast.error("Bạn cần đăng nhập để gửi khiếu nại");
+      return;
+    }
     try {
       const newComplaint: ComplaintAddRequest = {
-        employeeId: user.id,
         reason,
         date: disputeDate ? disputeDate : new Date(),
         complaintType: disputeType,
@@ -109,14 +134,11 @@ function DisputesPage() {
 
   const handleRecall = async (id: number) => {
     if (window.confirm("Bạn có chắc chắn muốn thu hồi đơn khiếu nại này?")) {
-      try {
-        await complaintApi.recallComplaint(id);
-        toast.success("Đã thu hồi đơn thành công!");
-        loadComplaints();
-      } catch (error) {
-        console.error("Lỗi khi thu hồi đơn:", error);
-        toast.error("Thu hồi đơn không thành công. Vui lòng thử lại.");
-      }
+
+      await complaintApi.recallComplaint(id);
+      toast.success("Đã thu hồi đơn thành công!");
+      loadComplaints();
+
     }
   };
 
@@ -150,7 +172,9 @@ function DisputesPage() {
     setCurrentPage(page);
   };
 
-  if (loading) return <>Đang tải</>;
+  if (loading) {
+    return <Spinner layout="employee" />;
+  }
 
   return (
     <EmployeeLayout>
@@ -264,9 +288,9 @@ function DisputesPage() {
                       <TableCell>
                         {complaint.createdAt
                           ? format(
-                              parseISO(complaint.createdAt),
-                              "dd/MM/yyyy HH:mm:ss"
-                            )
+                            parseISO(complaint.createdAt),
+                            "dd/MM/yyyy HH:mm:ss"
+                          )
                           : "N/A"}
                       </TableCell>
                       <TableCell>
@@ -276,18 +300,35 @@ function DisputesPage() {
                       </TableCell>
                       <TableCell>{complaint.reason}</TableCell>
                       <TableCell>{complaint.responseDate}</TableCell>
-                      <TableCell>{complaint.responseByFullName}</TableCell>
+                      <TableCell>{complaint.responseBy}</TableCell>
                       <TableCell>{getStatusBadge(complaint.status)}</TableCell>
                       <TableCell>
-                        {complaint.status === ComplaintStatus.PENDING && (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleRecall(complaint.id)}
-                          >
-                            Thu hồi
-                          </Button>
-                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="icon" variant="ghost">
+                              <MoreHorizontal />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedDetail(complaint);
+                                setShowDetailModal(true);
+                              }}
+                            >
+                              <Eye width={20} className="mr-2" />
+                              Xem chi tiết
+                            </DropdownMenuItem>
+                            {complaint.status === "PENDING" && (
+                              <DropdownMenuItem
+                                onClick={() => handleRecall(complaint.id)}
+                              >
+                                <ClipboardPaste width={20} className="mr-2" />
+                                Thu hồi
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -310,6 +351,162 @@ function DisputesPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
+        <DialogContent className="min-w-[800px] max-h-[90vh] overflow-y-auto p-0">
+          <div className="bg-white rounded-lg shadow-lg">
+            <div className="flex items-center justify-between px-6 pt-6 pb-2 border-b">
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                <span className="text-base font-semibold">
+                  Chi tiết phiếu khiếu nại
+                </span>
+              </DialogTitle>
+              {getStatusBadge(selectedDetail?.status)}
+            </div>
+
+            {selectedDetail && (
+              <div className="px-6 py-4 space-y-6">
+                {/* Thông tin nhân viên */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2">
+                    <UserIcon className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Họ tên:
+                    </span>
+                    <span className="text-sm font-medium">
+                      {selectedDetail.employeeName}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Building className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Bộ phận:
+                    </span>
+                    <span className="text-sm font-medium">
+                      {selectedDetail.departmentName}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Thông tin nghỉ phép */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Loại nghỉ phép:
+                    </span>
+                    <span className="text-sm font-medium">
+                      {selectedDetail.complaintType}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Ngày tạo:
+                    </span>
+                    <span className="text-sm font-medium">
+                      {selectedDetail.createdAt
+                        ? format(
+                          parseISO(selectedDetail.createdAt),
+                          "dd/MM/yyyy HH:mm:ss"
+                        )
+                        : "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Ngày khiếu nại:
+                    </span>
+                    <span className="text-sm font-medium">
+                      {selectedDetail.date
+                        ? format(parseISO(selectedDetail.date), "dd/MM/yyyy")
+                        : "N/A"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Lý do */}
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-sm text-muted-foreground font-medium">
+                      Lý do xin nghỉ:
+                    </span>
+                  </div>
+                  <div className="bg-gray-50 border rounded p-3 text-sm text-gray-700 whitespace-pre-line">
+                    {selectedDetail.reason}
+                  </div>
+                </div>
+
+                {/* Thông tin duyệt */}
+                {(selectedDetail.status === "APPROVED" ||
+                  selectedDetail.status === "REJECTED") && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground font-medium">
+                          Thông tin duyệt:
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center gap-2">
+                          <UserIcon className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
+                            Người duyệt:
+                          </span>
+                          <span className="text-sm font-medium">
+                            {selectedDetail.responseBy || "N/A"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
+                            Ngày duyệt:
+                          </span>
+                          <span className="text-sm font-medium">
+                            {selectedDetail.responseDate
+                              ? format(
+                                parseISO(selectedDetail.responseDate),
+                                "dd/MM/yyyy HH:mm:ss"
+                              )
+                              : "N/A"}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <AlertCircle className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground font-medium">
+                            Lý do{" "}
+                            {selectedDetail.status === "APPROVED"
+                              ? "duyệt"
+                              : "từ chối"}
+                            :
+                          </span>
+                        </div>
+                        <div className="bg-gray-50 border rounded p-3 text-sm text-gray-700 whitespace-pre-line">
+                          {selectedDetail.responseNote || "N/A"}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+              </div>
+            )}
+
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 px-6 pb-6 pt-2 border-t mt-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowDetailModal(false)}
+                className="flex-1 sm:flex-none"
+              >
+                Đóng
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </EmployeeLayout>
   );
 }

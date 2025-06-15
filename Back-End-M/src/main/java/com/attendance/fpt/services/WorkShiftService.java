@@ -11,5 +11,5 @@ public interface WorkShiftService {
     WorkShiftResponse addWorkShift(WorkShiftRequest workShiftRequest);
     WorkShiftResponse deleteWorkShift(Long id);
 
-    List<WorkShiftResponse> getWorkShiftsByEmployeeIdBetweenDate(Long employeeId, LocalDate startDate, LocalDate endDate);
+    List<WorkShiftResponse> getWorkShiftsByEmployeeBetweenDate(LocalDate startDate, LocalDate endDate);
 }

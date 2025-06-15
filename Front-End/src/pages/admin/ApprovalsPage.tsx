@@ -4,6 +4,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -71,7 +72,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { localStorageUtil } from "@/utils/localStorageUtil";
+import { useAuth } from "@/contexts/AuthContext";
+import Spinner from "@/components/Spinner";
 
 export default function ApprovalsPage() {
   const [loading, setLoading] = useState<boolean>(false);
@@ -84,11 +86,14 @@ export default function ApprovalsPage() {
     const searchParams = new URLSearchParams(window.location.search);
     return searchParams.get("tab") || "leaveRequests";
   });
-  const [leaveRequestSearchParams, setLeaveRequestSearchParams] = useSearchParams();
+  const [leaveRequestSearchParams, setLeaveRequestSearchParams] =
+    useSearchParams();
   const [complaintSearchParams, setComplaintSearchParams] = useSearchParams();
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<any>(null);
-  const [showReasonForm, setShowReasonForm] = useState<"approve" | "reject" | null>(null);
+  const [showReasonForm, setShowReasonForm] = useState<
+    "approve" | "reject" | null
+  >(null);
   const [reasonText, setReasonText] = useState("");
 
   const [filterLeaveRequests, setFilterLeaveRequests] = useState({
@@ -121,16 +126,20 @@ export default function ApprovalsPage() {
     Number(searchParams.get("complaintPage")) || 1
   );
   const [complaintTotalPage, setComplaintTotalPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const { user } = useAuth();
 
   useEffect(() => {
     const loadInitialData = async () => {
       try {
         setLoading(true);
-        const [departmentsData, shiftsData, leaveTypesData] = await Promise.all([
-          departmentApi.getAllDepartments(),
-          workShiftApi.getAllShifts(),
-          leaveTypeApi.getAllLeaveTypes()
-        ]);
+        const [departmentsData, shiftsData, leaveTypesData] = await Promise.all(
+          [
+            departmentApi.getAllDepartments(),
+            workShiftApi.getAllShifts(),
+            leaveTypeApi.getAllLeaveTypes(),
+          ]
+        );
 
         setDepartments(departmentsData);
         setShifts(shiftsData);
@@ -156,31 +165,47 @@ export default function ApprovalsPage() {
     };
 
     loadData();
-  }, [tab, leaveRequestPage, complaintPage, leaveRequestSearchParams, complaintSearchParams]);
+  }, [
+    tab,
+    leaveRequestPage,
+    complaintPage,
+    leaveRequestSearchParams,
+    complaintSearchParams,
+  ]);
 
   useEffect(() => {
     if (tab === "leaveRequests") {
       const params = {
         employeeName: leaveRequestSearchParams.get("employeeName") || "",
         departmentId: leaveRequestSearchParams.get("departmentId") || "all",
-        workShiftId: leaveRequestSearchParams.get("workShiftId") ? Number(leaveRequestSearchParams.get("workShiftId")) : null,
+        workShiftId: leaveRequestSearchParams.get("workShiftId")
+          ? Number(leaveRequestSearchParams.get("workShiftId"))
+          : null,
         leaveTypeId: leaveRequestSearchParams.get("leaveTypeId") || "all",
-        status: leaveRequestSearchParams.get("status") || "all",
+        status: leaveRequestSearchParams.get("status")
+          ? leaveRequestSearchParams.get("status")!.toUpperCase()
+          : "all",
         startDate: leaveRequestSearchParams.get("startDate") || "",
-        endDate: leaveRequestSearchParams.get("endDate") || ""
+        endDate: leaveRequestSearchParams.get("endDate") || "",
       };
-      setFilterLeaveRequests(prev => ({ ...prev, ...params }));
+      setFilterLeaveRequests((prev) => ({ ...prev, ...params }));
     } else if (tab === "complaints") {
       const params = {
         employeeName: complaintSearchParams.get("employeeName") || "",
         departmentId: complaintSearchParams.get("departmentId") || "all",
-        workShiftId: complaintSearchParams.get("workShiftId") ? Number(complaintSearchParams.get("workShiftId")) : null,
+        workShiftId: complaintSearchParams.get("workShiftId")
+          ? Number(complaintSearchParams.get("workShiftId"))
+          : null,
         complaintType: complaintSearchParams.get("complaintType") || "all",
-        status: complaintSearchParams.get("status") || "all",
-        startDate: complaintSearchParams.get("startDate") || filterComplaints.startDate,
-        endDate: complaintSearchParams.get("endDate") || filterComplaints.endDate
+        status: complaintSearchParams.get("status")
+          ? complaintSearchParams.get("status")!.toUpperCase()
+          : "all",
+        startDate:
+          complaintSearchParams.get("startDate") || filterComplaints.startDate,
+        endDate:
+          complaintSearchParams.get("endDate") || filterComplaints.endDate,
       };
-      setFilterComplaints(prev => ({ ...prev, ...params }));
+      setFilterComplaints((prev) => ({ ...prev, ...params }));
     }
   }, [tab, leaveRequestSearchParams, complaintSearchParams]);
 
@@ -198,6 +223,7 @@ export default function ApprovalsPage() {
       const response = await leaveRequestApi.getAllLeaveRequests(params);
       setLeaveRequests(response.data);
       setLeaveRequestTotalPage(response.totalPage);
+      setTotalItems(response.totalItem);
     } catch (error) {
       console.error(error);
       toast.error("Có lỗi xảy ra khi tải dữ liệu đơn nghỉ phép");
@@ -214,6 +240,7 @@ export default function ApprovalsPage() {
       const response = await complaintApi.getAllComplaints(params);
       setComplaints(response.data);
       setComplaintTotalPage(response.totalPage);
+      setTotalItems(response.totalItem);
     } catch (error) {
       console.error(error);
       toast.error("Có lỗi xảy ra khi tải dữ liệu khiếu nại");
@@ -317,10 +344,16 @@ export default function ApprovalsPage() {
     if (filterComplaints.status !== "all")
       newParams.set("status", filterComplaints.status);
 
-    if (filterComplaints.startDate && filterComplaints.startDate !== format(new Date(), "dd/MM/yyyy"))
+    if (
+      filterComplaints.startDate &&
+      filterComplaints.startDate !== format(new Date(), "dd/MM/yyyy")
+    )
       newParams.set("startDate", filterComplaints.startDate);
 
-    if (filterComplaints.endDate && filterComplaints.endDate !== format(new Date(), "dd/MM/yyyy"))
+    if (
+      filterComplaints.endDate &&
+      filterComplaints.endDate !== format(new Date(), "dd/MM/yyyy")
+    )
       newParams.set("endDate", filterComplaints.endDate);
 
     setComplaintSearchParams(newParams);
@@ -341,10 +374,16 @@ export default function ApprovalsPage() {
     setSearchParams(params);
   };
 
-
-  const handleApproveLeaveRequest = async (id: number, responseNote: string) => {
+  const handleApproveLeaveRequest = async (
+    id: number,
+    responseNote: string
+  ) => {
+    if (!user?.id) {
+      toast.error("Vui lòng đăng nhập lại để tiếp tục thao tác");
+      return;
+    }
     try {
-      await leaveRequestApi.approveLeaveRequest(id, responseNote, localStorageUtil.getUserFromLocalStorage().id);
+      await leaveRequestApi.approveLeaveRequest(id, responseNote);
       toast.success("Phê duyệt đơn nghỉ phép thành công");
       setShowDetailModal(false);
       setReasonText("");
@@ -354,27 +393,71 @@ export default function ApprovalsPage() {
         await loadLeaveRequests();
       }
     } catch (error) {
-      console.error(error);
-      toast.error("Có lỗi xảy ra khi phê duyệt đơn nghỉ phép");
+
     }
   };
 
   const handleRejectLeaveRequest = async (id: number, responseNote: string) => {
     try {
-      await leaveRequestApi.rejectLeaveRequest(id, responseNote, localStorageUtil.getUserFromLocalStorage().id);
+      if (!user || !user.id) {
+        toast.error("Vui lòng đăng nhập lại để tiếp tục thao tác");
+        return;
+      }
+      await leaveRequestApi.rejectLeaveRequest(id, responseNote);
       toast.success("Từ chối đơn nghỉ phép thành công");
       setShowDetailModal(false);
       setReasonText("");
       setShowReasonForm(null);
-      // Reload data
       if (tab === "leaveRequests") {
         await loadLeaveRequests();
       }
     } catch (error) {
-      console.error(error);
-      toast.error("Có lỗi xảy ra khi từ chối đơn nghỉ phép");
+
     }
   };
+
+  const handleApproveComplaint = async (id: number, responseNote: string) => {
+    if (!user || !user.id) {
+      toast.error("Vui lòng đăng nhập lại để tiếp tục thao tác");
+      return;
+    }
+    try {
+      await complaintApi.approveComplaint(id, responseNote);
+      toast.success("Phê duyệt đơn khiếu nại thành công");
+      setShowDetailModal(false);
+      setReasonText("");
+      setShowReasonForm(null);
+      if (tab === "complaints") {
+        await loadComplaints();
+      }
+    } catch (error) {
+
+    }
+  };
+
+  const handleRejectComplaint = async (id: number, responseNote: string) => {
+    try {
+      if (!user || !user.id) {
+        toast.error("Vui lòng đăng nhập lại để tiếp tục thao tác");
+        return;
+      }
+      await complaintApi.rejectComplaint(id, responseNote);
+      toast.success("Từ chối đơn khiếu nại thành công");
+      setShowDetailModal(false);
+      setReasonText("");
+      setShowReasonForm(null);
+      // Reload data
+      if (tab === "complaints") {
+        await loadComplaints();
+      }
+    } catch (error) {
+
+    }
+  };
+
+  if (loading) {
+    return <Spinner layout="admin" />;
+  }
 
   return (
     <AdminLayout>
@@ -386,11 +469,7 @@ export default function ApprovalsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs
-            className="space-y-4"
-            value={tab}
-            onValueChange={setTab}
-          >
+          <Tabs className="space-y-4" value={tab} onValueChange={setTab}>
             <TabsList>
               <TabsTrigger value="leaveRequests">Đơn nghỉ phép</TabsTrigger>
               <TabsTrigger value="complaints">Khiếu nại chấm công</TabsTrigger>
@@ -577,7 +656,7 @@ export default function ApprovalsPage() {
                 <div className="rounded-md border">
                   <Table>
                     <TableHeader>
-                      <TableRow>
+                      <TableRow className="border-b bg-muted/50">
                         <TableHead className="p-2 text-left font-medium">
                           STT
                         </TableHead>
@@ -660,16 +739,26 @@ export default function ApprovalsPage() {
                               <TableCell className="p-2 text-left font-medium">
                                 {request.createdAt
                                   ? format(
-                                    parseISO(request.createdAt),
-                                    "dd/MM/yyyy HH:mm:ss"
-                                  )
+                                      parseISO(request.createdAt),
+                                      "dd/MM/yyyy HH:mm:ss"
+                                    )
                                   : "N/A"}
                               </TableCell>
                               <TableCell className="p-2 text-left font-medium">
-                                {request.startDate ? format(parseISO(request.startDate), "dd/MM/yyyy") : "N/A"}
+                                {request.startDate
+                                  ? format(
+                                      parseISO(request.startDate),
+                                      "dd/MM/yyyy"
+                                    )
+                                  : "N/A"}
                               </TableCell>
                               <TableCell className="p-2 text-left font-medium">
-                                {request.endDate ? format(parseISO(request.endDate), "dd/MM/yyyy") : "N/A"}
+                                {request.endDate
+                                  ? format(
+                                      parseISO(request.endDate),
+                                      "dd/MM/yyyy"
+                                    )
+                                  : "N/A"}
                               </TableCell>
                               <TableCell className="p-2 text-left font-medium">
                                 {request.reason}
@@ -855,7 +944,7 @@ export default function ApprovalsPage() {
                 <div className="rounded-md border">
                   <Table>
                     <TableHeader>
-                      <TableRow>
+                      <TableRow className="border-b bg-muted/50">
                         <TableHead className="p-2 text-left font-medium">
                           STT
                         </TableHead>
@@ -888,23 +977,7 @@ export default function ApprovalsPage() {
                     <TableBody>
                       {(() => {
                         let tableContent;
-                        if (loading) {
-                          tableContent = (
-                            <TableRow>
-                              <TableCell
-                                colSpan={9}
-                                className="p-4 text-center"
-                              >
-                                <div className="flex items-center justify-center">
-                                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        } else if (
-                          complaints &&
-                          complaints.length === 0
-                        ) {
+                        if (complaints && complaints.length === 0) {
                           tableContent = (
                             <TableRow>
                               <TableCell
@@ -930,14 +1003,19 @@ export default function ApprovalsPage() {
                                 {complaint.departmentName}
                               </TableCell>
                               <TableCell className="p-2">
-                                {complaint.date ? format(parseISO(complaint.date), "dd/MM/yyyy") : "N/A"}
+                                {complaint.date
+                                  ? format(
+                                      parseISO(complaint.date),
+                                      "dd/MM/yyyy"
+                                    )
+                                  : "N/A"}
                               </TableCell>
                               <TableCell className="p-2">
                                 {complaint.createdAt
                                   ? format(
-                                    parseISO(complaint.createdAt),
-                                    "dd/MM/yyyy HH:mm:ss"
-                                  )
+                                      parseISO(complaint.createdAt),
+                                      "dd/MM/yyyy HH:mm:ss"
+                                    )
                                   : "N/A"}
                               </TableCell>
                               <TableCell className="p-2">
@@ -987,66 +1065,132 @@ export default function ApprovalsPage() {
             </TabsContent>
           </Tabs>
         </CardContent>
+        <CardFooter className="flex justify-between">
+          <div className="text-sm text-muted-foreground">
+            Tổng số: {totalItems} bản ghi
+          </div>
+        </CardFooter>
       </Card>
 
       <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
         <DialogContent className="min-w-[800px] max-h-[90vh] overflow-y-auto p-0">
           <div className="bg-white rounded-lg shadow-lg">
-            <div className="flex items-center justify-between px-6 pt-6 pb-2 border-b">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5" />
-                <span className="text-base font-semibold">Chi tiết phiếu nghỉ phép</span>
+            <DialogHeader className="px-6 pt-6 pb-2 border-b">
+              <div className="flex items-center justify-between">
+                <DialogTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  <span>
+                    {selectedDetail?.leaveType
+                      ? "Chi tiết phiếu nghỉ phép"
+                      : "Chi tiết phiếu khiếu nại"}
+                  </span>
+                </DialogTitle>
+                {getStatusBadge(selectedDetail?.status)}
               </div>
-
-              {getStatusBadge(selectedDetail?.status)}
-
-            </div>
+            </DialogHeader>
 
             {selectedDetail && (
               <div className="px-6 py-4 space-y-6">
-                {/* Thông tin nhân viên */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Họ tên:</span>
-                    <span className="text-sm font-medium">{selectedDetail.employeeName}</span>
+                    <span className="text-sm text-muted-foreground">
+                      Họ tên:
+                    </span>
+                    <span className="text-sm font-medium">
+                      {selectedDetail.employeeName}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Building className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Bộ phận:</span>
-                    <span className="text-sm font-medium">{selectedDetail.departmentName}</span>
+                    <span className="text-sm text-muted-foreground">
+                      Bộ phận:
+                    </span>
+                    <span className="text-sm font-medium">
+                      {selectedDetail.departmentName}
+                    </span>
                   </div>
                 </div>
 
-                {/* Thông tin nghỉ phép */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Loại nghỉ phép:</span>
-                    <span className="text-sm font-medium">{selectedDetail.leaveType?.name}</span>
+                    <span className="text-sm text-muted-foreground">
+                      Loại nghỉ phép:
+                    </span>
+                    <span className="text-sm font-medium">
+                      {selectedDetail.leaveType?.name ||
+                        selectedDetail.complaintType}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Ngày tạo:</span>
-                    <span className="text-sm font-medium">{selectedDetail.createdAt ? format(parseISO(selectedDetail.createdAt), "dd/MM/yyyy HH:mm:ss") : "N/A"}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Từ ngày:</span>
-                    <span className="text-sm font-medium">{selectedDetail.startDate ? format(parseISO(selectedDetail.startDate), "dd/MM/yyyy") : "N/A"}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Đến ngày:</span>
-                    <span className="text-sm font-medium">{selectedDetail.endDate ? format(parseISO(selectedDetail.endDate), "dd/MM/yyyy") : "N/A"}</span>
+                    <span className="text-sm text-muted-foreground">
+                      Ngày tạo:
+                    </span>
+                    <span className="text-sm font-medium">
+                      {selectedDetail.createdAt
+                        ? format(
+                            parseISO(selectedDetail.createdAt),
+                            "dd/MM/yyyy HH:mm:ss"
+                          )
+                        : "N/A"}
+                    </span>
                   </div>
                 </div>
+
+                {selectedDetail.leaveType ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        Từ ngày:
+                      </span>
+                      <span className="text-sm font-medium">
+                        {selectedDetail.startDate
+                          ? format(
+                              parseISO(selectedDetail.startDate),
+                              "dd/MM/yyyy"
+                            )
+                          : "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        Đến ngày:
+                      </span>
+                      <span className="text-sm font-medium">
+                        {selectedDetail.endDate
+                          ? format(
+                              parseISO(selectedDetail.endDate),
+                              "dd/MM/yyyy"
+                            )
+                          : "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Ngày khiếu nại:
+                    </span>
+                    <span className="text-sm font-medium">
+                      {selectedDetail.date
+                        ? format(parseISO(selectedDetail.date), "dd/MM/yyyy")
+                        : "N/A"}
+                    </span>
+                  </div>
+                )}
 
                 {/* Lý do */}
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <AlertCircle className="w-4 h-4" />
-                    <span className="text-sm text-muted-foreground font-medium">Lý do xin nghỉ:</span>
+                    <span className="text-sm text-muted-foreground font-medium">
+                      Lý do xin nghỉ:
+                    </span>
                   </div>
                   <div className="bg-gray-50 border rounded p-3 text-sm text-gray-700 whitespace-pre-line">
                     {selectedDetail.reason}
@@ -1054,23 +1198,37 @@ export default function ApprovalsPage() {
                 </div>
 
                 {/* Thông tin phản hồi */}
-                {(selectedDetail.status === "APPROVED" || selectedDetail.status === "REJECTED") && (
+                {(selectedDetail.status === "APPROVED" ||
+                  selectedDetail.status === "REJECTED") && (
                   <div className="border-t pt-4">
                     <div className="flex items-center gap-2 mb-3">
                       <AlertCircle className="w-4 h-4" />
-                      <span className="text-sm text-muted-foreground font-medium">Thông tin phản hồi:</span>
+                      <span className="text-sm text-muted-foreground font-medium">
+                        Thông tin phản hồi:
+                      </span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Người duyệt:</span>
-                        <span className="text-sm font-medium">{selectedDetail.responseBy || "N/A"}</span>
+                        <span className="text-sm text-muted-foreground">
+                          Người duyệt:
+                        </span>
+                        <span className="text-sm font-medium">
+                          {selectedDetail.responseBy || "N/A"}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Ngày duyệt:</span>
+                        <span className="text-sm text-muted-foreground">
+                          Ngày duyệt:
+                        </span>
                         <span className="text-sm font-medium">
-                          {selectedDetail.responseDate ? format(parseISO(selectedDetail.responseDate), "dd/MM/yyyy HH:mm:ss") : "N/A"}
+                          {selectedDetail.responseDate
+                            ? format(
+                                parseISO(selectedDetail.responseDate),
+                                "dd/MM/yyyy HH:mm:ss"
+                              )
+                            : "N/A"}
                         </span>
                       </div>
                     </div>
@@ -1078,7 +1236,11 @@ export default function ApprovalsPage() {
                       <div className="flex items-center gap-2 mb-1">
                         <AlertCircle className="w-4 h-4" />
                         <span className="text-sm text-muted-foreground font-medium">
-                          Lý do {selectedDetail.status === "APPROVED" ? "duyệt" : "từ chối"}:
+                          Lý do{" "}
+                          {selectedDetail.status === "APPROVED"
+                            ? "duyệt"
+                            : "từ chối"}
+                          :
                         </span>
                       </div>
                       <div className="bg-gray-50 border rounded p-3 text-sm text-gray-700 whitespace-pre-line">
@@ -1092,15 +1254,18 @@ export default function ApprovalsPage() {
 
             <DialogFooter className="flex flex-col sm:flex-row gap-2 px-6 pb-6 pt-2 border-t mt-2">
               {selectedDetail?.status === "PENDING" &&
-                (showReasonForm === "approve" || showReasonForm === "reject") ? (
+              (showReasonForm === "approve" || showReasonForm === "reject") ? (
                 <div className="w-full space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="reason" className="font-medium">
-                      Lý do {showReasonForm === "approve" ? "duyệt" : "từ chối"}:
+                      Lý do {showReasonForm === "approve" ? "duyệt" : "từ chối"}
+                      :
                     </Label>
                     <Textarea
                       id="reason"
-                      placeholder={`Nhập lý do ${showReasonForm === "approve" ? "duyệt" : "từ chối"}...`}
+                      placeholder={`Nhập lý do ${
+                        showReasonForm === "approve" ? "duyệt" : "từ chối"
+                      }...`}
                       value={reasonText}
                       onChange={(e) => setReasonText(e.target.value)}
                       className="min-h-[100px]"
@@ -1117,7 +1282,17 @@ export default function ApprovalsPage() {
                       <Button
                         variant="default"
                         onClick={() => {
-                          handleApproveLeaveRequest(selectedDetail.id, reasonText);
+                          if (selectedDetail?.leaveType) {
+                            handleApproveLeaveRequest(
+                              selectedDetail.id,
+                              reasonText
+                            );
+                          } else {
+                            handleApproveComplaint(
+                              selectedDetail.id,
+                              reasonText
+                            );
+                          }
                         }}
                       >
                         Xác nhận duyệt
@@ -1126,7 +1301,17 @@ export default function ApprovalsPage() {
                       <Button
                         variant="destructive"
                         onClick={() => {
-                          handleRejectLeaveRequest(selectedDetail.id, reasonText);
+                          if (selectedDetail?.leaveType) {
+                            handleRejectLeaveRequest(
+                              selectedDetail.id,
+                              reasonText
+                            );
+                          } else {
+                            handleRejectComplaint(
+                              selectedDetail.id,
+                              reasonText
+                            );
+                          }
                         }}
                       >
                         Xác nhận từ chối

@@ -11,12 +11,17 @@ import com.attendance.fpt.exceptions.custom.ResourceNotFoundException;
 import com.attendance.fpt.model.request.CheckInRequest;
 import com.attendance.fpt.model.request.CheckOutRequest;
 import com.attendance.fpt.model.response.AttendanceWorkShiftResponse;
+import com.attendance.fpt.model.response.ResponseWithPagination;
 import com.attendance.fpt.repositories.AttendanceRepository;
 import com.attendance.fpt.repositories.EmployeeRepository;
 import com.attendance.fpt.repositories.LocationRepository;
 import com.attendance.fpt.repositories.WorkShiftAssignmentRepository;
 import com.attendance.fpt.services.AttendanceService;
+import com.attendance.fpt.utils.SecurityUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -34,22 +40,24 @@ public class AttendanceServiceImpl implements AttendanceService {
     private final WorkShiftAssignmentRepository workShiftAssignmentRepository;
     private final EmployeeRepository employeeRepository;
     private final LocationRepository locationRepository;
+    private final SecurityUtil securityUtil;
 
     @Override
-    public List<AttendanceWorkShiftResponse> getAttendanceAndShiftAssignmentByEmployeeId(Long employeeId, Long month, Long year) {
+    public List<AttendanceWorkShiftResponse> getAttendanceAndShiftAssignmentByEmployee(Long month, Long year) {
         if (month == null) {
             month = (long) LocalDate.now().getMonthValue();
         }
         if (year == null) {
             year = (long) LocalDate.now().getYear();
         }
-        if (employeeId == null || month < 1 || month > 12 || year < 1900) {
+        Employee employee = securityUtil.getCurrentUser();
+        if ( month < 1 || month > 12 || year < 1900) {
             throw new IllegalArgumentException("Invalid input parameters");
         }
 
         List<WorkShiftAssignment> workShiftAssignments =
-                workShiftAssignmentRepository.findAllByEmployeeAndMonthAndYear(employeeId, month, year);
-        List<Attendance> attendances = attendanceRepository.findAllByEmployeeAndMonthAndYear(employeeId, month, year);
+                workShiftAssignmentRepository.findAllByEmployeeAndMonthAndYear(employee.getId(), month, year);
+        List<Attendance> attendances = attendanceRepository.findAllByEmployeeAndMonthAndYear(employee.getId(), month, year);
 
         if (workShiftAssignments.isEmpty() && attendances.isEmpty()) {
             return List.of();
@@ -72,8 +80,7 @@ public class AttendanceServiceImpl implements AttendanceService {
     @Transactional
     @Override
     public AttendanceWorkShiftResponse checkIn(CheckInRequest request) {
-        Employee employee = employeeRepository.findById(request.getEmployeeId())
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        Employee employee = securityUtil.getCurrentUser();
 
         Location location = locationRepository.findById(request.getLocationId())
                 .orElseThrow(() -> new RuntimeException("Location not found"));
@@ -103,7 +110,7 @@ public class AttendanceServiceImpl implements AttendanceService {
 
         // Tìm ca làm việc hiện tại của nhân viên
         WorkShiftAssignment currentShift = workShiftAssignmentRepository
-                .findCurrentShiftAssignment(request.getEmployeeId(), now.toLocalDate(), currentTime)
+                .findCurrentShiftAssignment(employee.getId(), now.toLocalDate(), currentTime)
                 .orElseThrow(() -> new ResourceNotFoundException("No active shift found"));
 
         if (currentShift.getAttendance() != null) {
@@ -142,8 +149,7 @@ public class AttendanceServiceImpl implements AttendanceService {
     @Transactional
     @Override
     public AttendanceWorkShiftResponse checkOut(CheckOutRequest checkOutRequest) {
-        Employee employee = employeeRepository.findById(checkOutRequest.getEmployeeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+        Employee employee = securityUtil.getCurrentUser();
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -161,17 +167,51 @@ public class AttendanceServiceImpl implements AttendanceService {
         return AttendanceWorkShiftConverter.toResponseHaveAttendance(attendance.getWorkShiftAssignment(), attendanceRepository.save(attendance));
     }
 
+
     @Override
-    public List<AttendanceWorkShiftResponse> getAllAttendances() {
-        Sort sort = Sort.by(Sort.Direction.DESC, "checkOutTime", "checkInTime");
-        List<Attendance> attendances = attendanceRepository.findAll(sort);
-        if (!attendances.isEmpty()) {
-            return attendances.stream()
-                    .map(attendance -> AttendanceWorkShiftConverter.toResponseHaveAttendance(
-                            attendance.getWorkShiftAssignment(), attendance))
+    public ResponseWithPagination<List<AttendanceWorkShiftResponse>> getAllAttendances(String employeeName,
+                                                                                       LocalDate date,
+                                                                                       String status,
+                                                                                       int page,
+                                                                                       int limit) {
+        Sort sort = Sort.by("dateAssign").descending()
+                .and(Sort.by("workShift.endTime").descending());
+
+        Pageable pageable = PageRequest.of(page - 1, limit, sort);
+        Page<WorkShiftAssignment> wsa;
+        if (status != null && status.equals("ABSENT")){
+             wsa = workShiftAssignmentRepository.getAllWorkShiftAttendanceByFilterAndAbsent(
+                    employeeName,
+                    date,
+                    pageable);
+        } else {
+            wsa = workShiftAssignmentRepository.getAllWorkShiftAttendanceByFilter(
+                    employeeName,
+                    date,
+                    status != null ? AttendanceStatus.valueOf(status.toUpperCase()) : null,
+                    pageable);
+        }
+
+
+        List<AttendanceWorkShiftResponse> rs = new ArrayList<>();
+        if (!wsa.getContent().isEmpty()) {
+            rs = wsa.getContent().stream()
+                    .map( workShiftAssignment -> {
+                        if (workShiftAssignment.getAttendance() == null) {
+                            return AttendanceWorkShiftConverter.toResponseNoHaveAttendance(workShiftAssignment);
+                        }
+                        return AttendanceWorkShiftConverter.toResponseHaveAttendance(workShiftAssignment, workShiftAssignment.getAttendance());
+                    })
                     .toList();
         }
-        return List.of();
+
+        return ResponseWithPagination.<List<AttendanceWorkShiftResponse>>builder()
+                .data(rs)
+                .totalItem((int) wsa.getTotalElements())
+                .totalPage(wsa.getTotalPages())
+                .limit(limit)
+                .page(page)
+                .build();
     }
 
     @Override

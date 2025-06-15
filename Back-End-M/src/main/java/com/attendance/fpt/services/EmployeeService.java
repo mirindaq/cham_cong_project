@@ -13,7 +13,7 @@ public interface EmployeeService {
 
     EmployeeResponse updateEmployee(Long employeeId, EmployeeAddRequest employeeAddRequest);
 
-    EmployeeResponse updateProfile(Long employeeId, EmployeeProfileRequest employeeProfileRequest);
+    EmployeeResponse updateProfile( EmployeeProfileRequest employeeProfileRequest);
 
     List<EmployeeResponse> getEmployeeToAssignment();
 
@@ -28,7 +28,7 @@ public interface EmployeeService {
         String departmentName
     );
 
-    EmployeeResponse getEmployeeById(Long employeeId);
+    EmployeeResponse getProfile();
 
     long countEmployees();
 } 

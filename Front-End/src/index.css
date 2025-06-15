@@ -211,3 +211,95 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom toast styling */
+.custom-toast {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Success toast - green */
+[data-sonner-toast][data-type="success"] {
+  background: #f0fdf4 !important;
+  border-color: #22c55e !important;
+  color: #15803d !important;
+}
+
+[data-sonner-toast][data-type="success"] [data-icon] {
+  color: #22c55e !important;
+}
+
+/* Error toast - red */
+[data-sonner-toast][data-type="error"] {
+  background: #fef2f2 !important;
+  border-color: #ef4444 !important;
+  color: #dc2626 !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-icon] {
+  color: #ef4444 !important;
+}
+
+/* Warning toast - yellow */
+[data-sonner-toast][data-type="warning"] {
+  background: #fffbeb !important;
+  border-color: #f59e0b !important;
+  color: #d97706 !important;
+}
+
+[data-sonner-toast][data-type="warning"] [data-icon] {
+  color: #f59e0b !important;
+}
+
+/* Info toast - blue */
+[data-sonner-toast][data-type="info"] {
+  background: #eff6ff !important;
+  border-color: #3b82f6 !important;
+  color: #1d4ed8 !important;
+}
+
+[data-sonner-toast][data-type="info"] [data-icon] {
+  color: #3b82f6 !important;
+}
+
+/* Loading toast */
+[data-sonner-toast][data-type="loading"] {
+  background: #f8fafc !important;
+  border-color: #64748b !important;
+  color: #475569 !important;
+}
+
+/* Custom toast variants */
+[data-sonner-toast][data-type="custom"] {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border: none !important;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  [data-sonner-toast] {
+    background: #1f2937 !important;
+    color: #f9fafb !important;
+    border-color: #374151 !important;
+  }
+
+  [data-sonner-toast][data-type="success"] {
+    background: #064e3b !important;
+    color: #6ee7b7 !important;
+  }
+
+  [data-sonner-toast][data-type="error"] {
+    background: #7f1d1d !important;
+    color: #fca5a5 !important;
+  }
+
+  [data-sonner-toast][data-type="warning"] {
+    background: #78350f !important;
+    color: #fcd34d !important;
+  }
+
+  [data-sonner-toast][data-type="info"] {
+    background: #1e3a8a !important;
+    color: #93c5fd !important;
+  }
+}

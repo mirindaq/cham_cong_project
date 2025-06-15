@@ -7,8 +7,6 @@ import lombok.Setter;
 @Getter
 @Setter
 public class CheckInRequest {
-        @NotNull(message = "Employee ID cannot be blank")
-        private Long employeeId;
         @NotNull(message = "Location ID cannot be null")
         private Long locationId;
         @NotNull(message = "Check-in time cannot be null")

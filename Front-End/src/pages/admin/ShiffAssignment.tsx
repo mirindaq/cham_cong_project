@@ -51,7 +51,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { User } from "@/types/user.type";
+import type { UserResponse } from "@/types/user.type";
 import type {
   WorkShift,
   WorkShiftAssignment,
@@ -64,6 +64,8 @@ import { departmentApi } from "@/services/department.service";
 import type { Department } from "@/types/department.type";
 import { useSearchParams } from "react-router";
 import { workShiftApi } from "@/services/workShift.service";
+import Spinner from "@/components/Spinner";
+import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 
 export default function ShiffAssignment() {
   const [shifts, setShifts] = useState<WorkShift[]>([]);
@@ -73,7 +75,7 @@ export default function ShiffAssignment() {
     startTime: "",
     endTime: "",
   });
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCalendarLoading, setIsCalendarLoading] = useState(false);
   // State cho phân công
@@ -105,26 +107,25 @@ export default function ShiffAssignment() {
   const [tempMonth, setTempMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<"table" | "calendar">("calendar");
   const [searchParams, setSearchParams] = useSearchParams();
+  const [deleteShiftDialog, setDeleteShiftDialog] = useState({
+    isOpen: false,
+    shiftId: null as number | null,
+    shiftName: "",
+  });
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const [shiftsData, usersData, departmentsData] = await Promise.all([
-          workShiftApi.getAllShifts(),
-          userApi.getEmployeeToAssignment(),
-          departmentApi.getAllDepartments(),
-        ]);
+      setIsLoading(true);
+      const [shiftsData, usersData, departmentsData] = await Promise.all([
+        workShiftApi.getAllShifts(),
+        userApi.getEmployeeToAssignment(),
+        departmentApi.getAllDepartments(),
+      ]);
 
-        if (shiftsData) setShifts(shiftsData);
-        if (usersData) setUsers(usersData);
-        if (departmentsData) setDepartments(departmentsData);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast.error("Có lỗi xảy ra khi tải dữ liệu");
-      } finally {
-        setIsLoading(false);
-      }
+      if (shiftsData) setShifts(shiftsData);
+      if (usersData) setUsers(usersData);
+      if (departmentsData) setDepartments(departmentsData);
+      setIsLoading(false);
     };
 
     fetchData();
@@ -132,26 +133,17 @@ export default function ShiffAssignment() {
 
   useEffect(() => {
     const fetchAssignments = async () => {
-      try {
-        setIsCalendarLoading(true);
-        const assignments = await shiftAssignmentApi.getAllAssignments(
-          searchParams
-        );
-        if (assignments) {
-          setAssignments(assignments);
-        } else {
-          setAssignments([]);
-          toast.error("Không tìm thấy phân ca phù hợp.");
-        }
-      } catch (error: any) {
-        toast.error(
-          error?.response?.data?.message ||
-            error?.message ||
-            "Lỗi khi lấy dữ liệu phân ca."
-        );
-      } finally {
-        setIsCalendarLoading(false);
+      setIsCalendarLoading(true);
+      const assignments = await shiftAssignmentApi.getAllAssignments(
+        searchParams
+      );
+      if (assignments) {
+        setAssignments(assignments);
+      } else {
+        setAssignments([]);
+        toast.error("Không tìm thấy phân ca phù hợp.");
       }
+      setIsCalendarLoading(false);
     };
     fetchAssignments();
   }, [searchParams]);
@@ -167,15 +159,11 @@ export default function ShiffAssignment() {
       return;
     }
 
-    try {
-      const addedShift = await workShiftApi.addShift(newShift);
-      setShifts((prev) => [...prev, addedShift]);
-      setShowAddShift(false);
-      setNewShift({ name: "", startTime: "", endTime: "" });
-      toast.success("Thêm ca làm việc thành công!");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || error.message);
-    }
+    const addedShift = await workShiftApi.addShift(newShift);
+    setShifts((prev) => [...prev, addedShift]);
+    setShowAddShift(false);
+    setNewShift({ name: "", startTime: "", endTime: "" });
+    toast.success("Thêm ca làm việc thành công!");
   };
 
   const handleAssign = async () => {
@@ -205,14 +193,10 @@ export default function ShiffAssignment() {
       }
     }
 
-    try {
-      const assigned = await shiftAssignmentApi.assignShifts(assignments);
-      if (assigned) {
-        setAssignments((prev) => [...prev, ...assigned]);
-        toast.success("Phân công ca làm việc thành công!");
-      }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || error.message);
+    const assigned = await shiftAssignmentApi.assignShifts(assignments);
+    if (assigned) {
+      setAssignments((prev) => [...prev, ...assigned]);
+      toast.success("Phân công ca làm việc thành công!");
     }
 
     setShowAssignDialog(false);
@@ -225,22 +209,43 @@ export default function ShiffAssignment() {
     assignmentId: number,
     employeeId: number
   ) => {
-    try {
-      await shiftAssignmentApi.deleteAssignment(assignmentId, employeeId);
-      setAssignments((prev) => prev.filter((a) => a.id !== assignmentId));
-      toast.success("Xóa phân công thành công!");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || error.message);
+    await shiftAssignmentApi.deleteAssignment(assignmentId, employeeId);
+    setAssignments((prev) => prev.filter((a) => a.id !== assignmentId));
+    toast.success("Xóa phân công thành công!");
+  };
+
+  const handleDeleteShift = (shiftId: number) => {
+    const shiftToDelete = shifts.find((shift) => shift.id === shiftId);
+    if (shiftToDelete) {
+      setDeleteShiftDialog({
+        isOpen: true,
+        shiftId: shiftId,
+        shiftName: shiftToDelete.name,
+      });
     }
   };
 
-  const handleDeleteShift = async (shiftId: number) => {
+  const handleDeleteShiftCancel = () => {
+    setDeleteShiftDialog({
+      isOpen: false,
+      shiftId: null,
+      shiftName: "",
+    });
+  };
+
+  const handleDeleteShiftConfirm = async () => {
+    if (deleteShiftDialog.shiftId === null) return;
+
     try {
-      await workShiftApi.deleteShift(shiftId);
-      setShifts((prev) => prev.filter((s) => s.id !== shiftId));
+      await workShiftApi.deleteShift(deleteShiftDialog.shiftId);
+      setShifts((prev) =>
+        prev.filter((shift) => shift.id !== deleteShiftDialog.shiftId)
+      );
       toast.success("Xóa ca làm thành công!");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || error.message);
+    } catch (error) {
+      toast.error("Không thể xóa ca làm. Vui lòng thử lại sau.");
+    } finally {
+      handleDeleteShiftCancel();
     }
   };
 
@@ -279,14 +284,6 @@ export default function ShiffAssignment() {
         isSameDay(new Date(assignment.dateAssign), date)
       );
     };
-
-    if (isCalendarLoading) {
-      return (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      );
-    }
 
     return (
       <div className="space-y-4">
@@ -360,7 +357,10 @@ export default function ShiffAssignment() {
                           {isAfter(
                             new Date(assignment.dateAssign),
                             new Date()
-                          ) && !assignment.attendanceId && <Trash2 className="h-3 w-3 text-destructive" />}
+                          ) &&
+                            !assignment.attendanceId && (
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            )}
                         </Button>
                       </div>
                     </div>
@@ -375,13 +375,7 @@ export default function ShiffAssignment() {
   };
 
   if (isLoading) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-        </div>
-      </AdminLayout>
-    );
+    return <Spinner layout="admin" />;
   }
 
   return (
@@ -407,80 +401,88 @@ export default function ShiffAssignment() {
                 </Button>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="p-2 text-left">STT</TableHead>
-                      <TableHead className="p-2 text-left">Tên ca</TableHead>
-                      <TableHead className="p-2 text-left">Bắt đầu</TableHead>
-                      <TableHead className="p-2 text-left">Kết thúc</TableHead>
-                      <TableHead className="p-2 text-left">Thao tác</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {shifts.map((shift, idx) => (
-                      <TableRow key={shift.id} className="border-b">
-                        <TableCell className="p-2">{idx + 1}</TableCell>
-                        <TableCell className="p-2">
-                          <span
-                            className="inline-block w-2 h-2 rounded-full mr-2 align-middle"
-                            style={{
-                              backgroundColor: [
-                                "#3b82f6",
-                                "#10b981",
-                                "#f59e42",
-                                "#ef4444",
-                                "#a855f7",
-                              ][shift.id % 5],
-                            }}
-                            title="Màu ca làm"
-                          ></span>
-                          {shift.name}
-                        </TableCell>
-                        <TableCell className="p-2">{shift.startTime}</TableCell>
-                        <TableCell className="p-2">{shift.endTime}</TableCell>
-                        <TableCell className="p-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteShift(shift.id)}
-                            className="hover:bg-destructive/10"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="p-2 text-left">STT</TableHead>
+                        <TableHead className="p-2 text-left">Tên ca</TableHead>
+                        <TableHead className="p-2 text-left">Bắt đầu</TableHead>
+                        <TableHead className="p-2 text-left">
+                          Kết thúc
+                        </TableHead>
+                        <TableHead className="p-2 text-left">
+                          Thao tác
+                        </TableHead>
                       </TableRow>
-                    ))}
-                    {shifts.length === 0 && (
-                      <TableRow>
-                        <TableCell
-                          colSpan={5}
-                          className="text-center py-8 text-muted-foreground"
-                        >
-                          <div className="flex flex-col items-center gap-2">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="24"
-                              height="24"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="w-8 h-8"
+                    </TableHeader>
+                    <TableBody>
+                      {shifts.map((shift, idx) => (
+                        <TableRow key={shift.id} className="border-b">
+                          <TableCell className="p-2">{idx + 1}</TableCell>
+                          <TableCell className="p-2">
+                            <span
+                              className="inline-block w-2 h-2 rounded-full mr-2 align-middle"
+                              style={{
+                                backgroundColor: [
+                                  "#3b82f6",
+                                  "#10b981",
+                                  "#f59e42",
+                                  "#ef4444",
+                                  "#a855f7",
+                                ][shift.id % 5],
+                              }}
+                              title="Màu ca làm"
+                            ></span>
+                            {shift.name}
+                          </TableCell>
+                          <TableCell className="p-2">
+                            {shift.startTime}
+                          </TableCell>
+                          <TableCell className="p-2">{shift.endTime}</TableCell>
+                          <TableCell className="p-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteShift(shift.id)}
+                              className="hover:bg-destructive/10"
                             >
-                              <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-                              <path d="M12 8v4" />
-                              <path d="M12 16h.01" />
-                            </svg>
-                            <p>Không có ca làm nào</p>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {shifts.length === 0 && (
+                        <TableRow>
+                          <TableCell
+                            colSpan={5}
+                            className="text-center py-8 text-muted-foreground"
+                          >
+                            <div className="flex flex-col items-center gap-2">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="w-8 h-8"
+                              >
+                                <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+                                <path d="M12 8v4" />
+                                <path d="M12 16h.01" />
+                              </svg>
+                              <p>Không có ca làm nào</p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -742,21 +744,22 @@ export default function ShiffAssignment() {
                               {isAfter(
                                 new Date(assignment.dateAssign),
                                 new Date()
-                              ) && !assignment.attendanceId && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    handleDeleteAssignment(
-                                      assignment.id,
-                                      assignment.employeeId
-                                    )
-                                  }
-                                  className="hover:bg-destructive/10"
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              )}
+                              ) &&
+                                !assignment.attendanceId && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() =>
+                                      handleDeleteAssignment(
+                                        assignment.id,
+                                        assignment.employeeId
+                                      )
+                                    }
+                                    className="hover:bg-destructive/10"
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                )}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -1092,6 +1095,14 @@ export default function ShiffAssignment() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <DeleteConfirmationDialog
+        isOpen={deleteShiftDialog.isOpen}
+        onClose={handleDeleteShiftCancel}
+        onConfirm={handleDeleteShiftConfirm}
+        itemName={deleteShiftDialog.shiftName}
+        description="Bạn có chắc chắn muốn xóa ca làm"
+      />
     </AdminLayout>
   );
 }

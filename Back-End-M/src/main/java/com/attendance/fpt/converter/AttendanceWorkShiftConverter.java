@@ -6,16 +6,36 @@ import com.attendance.fpt.entity.WorkShiftAssignment;
 import com.attendance.fpt.model.response.AttendanceWorkShiftResponse;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 public class AttendanceWorkShiftConverter {
 
     public static AttendanceWorkShiftResponse toResponseNoHaveAttendance(WorkShiftAssignment workShiftAssignment) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDate assignDate = workShiftAssignment.getDateAssign();
+        LocalTime endTime = workShiftAssignment.getWorkShift().getEndTime();
+
+        String status;
+        if (assignDate.isBefore(now.toLocalDate())) {
+            status = "ABSENT";
+        } else if (assignDate.isEqual(now.toLocalDate())) {
+            if (endTime.isBefore(now.toLocalTime())) {
+                status = "ABSENT";
+            } else {
+                status = null;
+            }
+        } else {
+            status = null;
+        }
+
+
         return AttendanceWorkShiftResponse.builder()
                 .workShifts(WorkShiftAssignmentConverter.toResponse(workShiftAssignment))
                 .date(workShiftAssignment.getDateAssign())
                 .checkIn(null)
                 .checkOut(null)
-                .status(workShiftAssignment.getDateAssign().isBefore(LocalDate.now()) ? "ABSENT" : null)
+                .status(status)
                 .attendanceId(null)
                 .locationName(null)
                 .build();

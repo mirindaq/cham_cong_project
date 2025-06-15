@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -21,6 +22,7 @@ public class WorkShiftAssignmentController {
     private final WorkShiftAssignmentService workShiftAssignmentService;
 
     @GetMapping("")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<List<WorkShiftAssignmentResponse>>> getAllAssignments(
             @RequestParam(required = false) Long employeeId,
             @RequestParam(required = false) Long workShiftId,
@@ -43,6 +45,7 @@ public class WorkShiftAssignmentController {
     }
 
     @PostMapping("/add")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<List<WorkShiftAssignmentResponse>>> addAssignment(
             @Valid @RequestBody WorkShiftAssignmentListRequest requests) {
         return ResponseEntity.ok(new ResponseSuccess<>(
@@ -53,6 +56,7 @@ public class WorkShiftAssignmentController {
     }
 
     @DeleteMapping("/delete")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<String>> deleteAssignment(
             @RequestParam Long employeeId,
             @RequestParam Long workShiftAssignmentId) {

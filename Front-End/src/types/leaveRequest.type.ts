@@ -1,7 +1,6 @@
 import type { LeaveType } from "./leaveType";
 
 export type LeaveRequestAdd = {
-  employeeId: number;
   startDate: Date;
   endDate: Date;
   reason: string;

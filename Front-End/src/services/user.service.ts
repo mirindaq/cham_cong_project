@@ -11,8 +11,8 @@ export const userApi = {
     return response.data;
   },
 
-  getProfile: async (employeeId: number) => {
-    const response = await http.get(`/employees/profile/${employeeId}`);
+  getProfile: async () => {
+    const response = await http.get(`/employees/profile`);
     return response.data;
   },
 
@@ -21,11 +21,8 @@ export const userApi = {
     return response.data;
   },
 
-  updateProfile: async (employeeId: number, profileData: any) => {
-    const response = await http.put(
-      `/employees/update-profile/${employeeId}`,
-      profileData
-    );
+  updateProfile: async (profileData: any) => {
+    const response = await http.put(`/employees/update-profile`, profileData);
     return response.data;
   },
   countAllUsers: async () => {

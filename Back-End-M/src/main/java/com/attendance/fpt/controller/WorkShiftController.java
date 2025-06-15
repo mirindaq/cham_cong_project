@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -21,6 +22,7 @@ public class WorkShiftController {
     private final WorkShiftService workShiftService;
 
     @GetMapping("")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<List<WorkShiftResponse>>> getAllWorkShifts() {
         return ResponseEntity.ok(new ResponseSuccess<>(
                 HttpStatus.OK,
@@ -29,19 +31,20 @@ public class WorkShiftController {
         ));
     }
 
-    @GetMapping("/employee/{employeeId}")
-    public ResponseEntity<ResponseSuccess<List<WorkShiftResponse>>> getWorkShiftsByEmployeeIdBetweenDate(
-            @PathVariable Long employeeId,
+    @GetMapping("/employee")
+    @PreAuthorize("hasRole('ROLE_EMPLOYEE')")
+    public ResponseEntity<ResponseSuccess<List<WorkShiftResponse>>> getWorkShiftsByEmployeeBetweenDate(
             @RequestParam LocalDate startDate,
             @RequestParam LocalDate endDate) {
         return ResponseEntity.ok(new ResponseSuccess<>(
                 HttpStatus.OK,
                 "Get work shifts by employee ID success",
-                workShiftService.getWorkShiftsByEmployeeIdBetweenDate(employeeId, startDate, endDate)
+                workShiftService.getWorkShiftsByEmployeeBetweenDate( startDate, endDate)
         ));
     }
 
     @PostMapping("/add")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<WorkShiftResponse>> addWorkShift(@Valid @RequestBody WorkShiftRequest workShiftRequest) {
         return ResponseEntity.ok(new ResponseSuccess<>(
                 HttpStatus.CREATED,
@@ -51,6 +54,7 @@ public class WorkShiftController {
     }
 
     @DeleteMapping("/delete/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ResponseSuccess<WorkShiftResponse>> deleteWorkShift(@PathVariable Long id) {
 
         return ResponseEntity.ok(new ResponseSuccess<>(

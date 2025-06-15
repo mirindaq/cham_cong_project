@@ -13,7 +13,7 @@ export default function ChangePasswordFirstLogin() {
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [loading, setLoading] = useState(false)
-  const [username, setUsername] = useState<string | null>(null)
+  const [username, setUsername] = useState<string>("")
 
   useEffect(() => {
     const storedUsername = sessionStorage.getItem("pendingUsername")
@@ -42,7 +42,7 @@ export default function ChangePasswordFirstLogin() {
       })
       if (response.status === 200) {
         sessionStorage.removeItem("pendingUsername")
-        localStorageUtil.setUserToLocalStorage(response.data)
+        localStorageUtil.setAuthToLocalStorage(response.data.accessToken, response.data.role)
         toast.success("Đổi mật khẩu thành công!")
         if (response.data.role === "ADMIN") {
           navigate("/admin/dashboard")

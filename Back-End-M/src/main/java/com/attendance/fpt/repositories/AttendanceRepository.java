@@ -1,10 +1,14 @@
 package com.attendance.fpt.repositories;
 
 import com.attendance.fpt.entity.Attendance;
+import com.attendance.fpt.enums.AttendanceStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,4 +29,10 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
            "ORDER BY COALESCE(a.checkOutTime, a.checkInTime) DESC " +
            "LIMIT 3")
     List<Attendance> findRecentCheckers();
+
+
+    @Query("SELECT COUNT(a) FROM Attendance a " +
+              "WHERE  a.workShiftAssignment.dateAssign = :date" +
+            " AND a.status = :status")
+    long countByDateAndStatus(@Param("date") LocalDate date,  @Param("status") AttendanceStatus status);
 }

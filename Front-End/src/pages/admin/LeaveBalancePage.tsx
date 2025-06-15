@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,8 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash, Calendar, Users, Search } from "lucide-react";
+import { Plus, Edit, Trash, Calendar, Users, Search, X, Check } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -39,37 +38,86 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { leaveTypeApi } from "@/services/leaveType.service";
 import { toast } from "sonner";
 import type { LeaveType } from "@/types/leaveType";
-
-interface LeaveBalance {
-  id: number;
-  usedDay: number;
-  year: number;
-  remainingDay: number;
-  employee: {
-    id: number;
-    name: string;
-    department?: string;
-    position?: string;
-  };
-  leaveType: LeaveType;
-}
+import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
+import { leaveBalanceApi } from "@/services/leaveBalance.service";
+import { useSearchParams } from "react-router";
+import { departmentApi } from "@/services/department.service";
+import type { Department } from "@/types/department.type";
+import type { LeaveBalancePerEmployeeResponse } from "@/types/leaveBalance.type";
+import PaginationComponent from "@/components/PaginationComponent";
+import Spinner from "@/components/Spinner";
+import { getYearOptions } from "@/utils/helper";
 
 export default function LeaveBalancePage() {
   const [showAddLeaveTypeDialog, setShowAddLeaveTypeDialog] = useState(false);
   const [showEditLeaveTypeDialog, setShowEditLeaveTypeDialog] = useState(false);
   const [editLeaveTypeId, setEditLeaveTypeId] = useState<number | null>(null);
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
-  const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedYear, setSelectedYear] = useState("2024");
-  const [selectedLeaveType, setSelectedLeaveType] = useState("all");
-  const [selectedDepartment, setSelectedDepartment] = useState("all");
+  const [leaveBalances, setLeaveBalances] = useState<
+    LeaveBalancePerEmployeeResponse[]
+  >([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [params, setParams] = useSearchParams();
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [filterLeaveBalances, setFilterLeaveBalances] = useState({
+    employeeName: "",
+    departmentId: 0,
+    year: 2025,
+    leaveBalanceType: "all",
+  });
 
   const [newLeaveType, setNewLeaveType] = useState({
     name: "",
     maxDayPerYear: 0,
+    active: false
   });
+
+  const [deleteDialog, setDeleteDialog] = useState({
+    isOpen: false,
+    leaveTypeId: null as number | null,
+    leaveTypeName: "",
+  });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPage, setTotalPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [leaveBalanceTypes, setLeaveBalanceTypes] = useState<LeaveType[]>([]);
+
+  useEffect(() => {
+    const departmentId = params.get("departmentId");
+    const employeeName = params.get("employeeName") || "";
+    const year = params.get("year") ? parseInt(params.get("year")!) : 2025;
+    const leaveBalanceType = params.get("leaveBalanceType") || "all";
+    setFilterLeaveBalances({
+      employeeName,
+      departmentId: departmentId ? parseInt(departmentId) : 0,
+      year,
+      leaveBalanceType,
+    });
+  }, [params]);
+
+  const loadLeaveBalanceTypes = async () => {
+    setLoading(true);
+    const response = await leaveTypeApi.getAllLeaveTypesActive();
+    setLeaveBalanceTypes(response);
+    setLoading(false);
+  };
+  
+  const loadLeaveBalances = async () => {
+    setLoading(true);
+    try {
+      const response = await leaveBalanceApi.getAllLeaveBalance(params);
+      setTotalPage(response.data.totalPage);
+      setLeaveBalances(response.data.data);
+      setTotalItems(response.data.totalItem);
+    } catch (error) {
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    loadLeaveBalanceTypes();
+  }, []);
 
   useEffect(() => {
     const loadLeaveTypes = async () => {
@@ -78,8 +126,6 @@ export default function LeaveBalancePage() {
         const response = await leaveTypeApi.getAllLeaveTypes();
         setLeaveTypes(response);
       } catch (error) {
-        console.error(error);
-        toast.error("Có lỗi xảy ra khi tải dữ liệu");
       } finally {
         setLoading(false);
       }
@@ -87,36 +133,71 @@ export default function LeaveBalancePage() {
     loadLeaveTypes();
   }, []);
 
-  // Get unique departments
-  const departments = Array.from(
-    new Set(leaveBalances.map((balance) => balance.employee.department))
-  );
+  useEffect(() => {
+    const loadDepartments = async () => {
+      setLoading(true);
+      try {
+        const response = await departmentApi.getAllDepartments();
+        setDepartments(response);
+      } catch (error) {
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadDepartments();
+  }, []);
 
-  // Group leave balances by employee
-  const employeeBalances = leaveBalances.reduce((acc, balance) => {
-    if (!acc[balance.employee.id]) {
-      acc[balance.employee.id] = {
-        employee: balance.employee,
-        balances: [],
-      };
+  useEffect(() => {
+
+    loadLeaveBalances();
+  }, [params]);
+
+  const handleFilterLeaveBalances = async () => {
+    const newParams = new URLSearchParams();
+
+    if (filterLeaveBalances.employeeName) {
+      newParams.set("employeeName", filterLeaveBalances.employeeName);
     }
-    acc[balance.employee.id].balances.push(balance);
-    return acc;
-  }, {} as Record<number, { employee: { id: number; name: string; department?: string; position?: string }; balances: LeaveBalance[] }>);
+
+    if (filterLeaveBalances.departmentId !== 0) {
+      newParams.set(
+        "departmentId",
+        filterLeaveBalances.departmentId.toString()
+      );
+    }
+
+    if (filterLeaveBalances.year) {
+      newParams.set("year", filterLeaveBalances.year.toString());
+    }
+    if (filterLeaveBalances.leaveBalanceType !== "all") {
+      newParams.set("leaveBalanceType", filterLeaveBalances.leaveBalanceType);
+    }
+
+    if (currentPage > 1) {
+      newParams.set("page", "1");
+    }
+
+    setParams(newParams);
+    setCurrentPage(1);
+  };
 
   const handleAddLeaveType = async () => {
     const newType: LeaveType = {
       id: leaveTypes.length + 1,
       name: newLeaveType.name,
       maxDayPerYear: newLeaveType.maxDayPerYear,
+      active: false
     };
-    console.log(newType);
 
     try {
-      await leaveTypeApi.addLeaveType(newLeaveType);
+      await leaveTypeApi.addLeaveType({
+        name: newLeaveType.name,
+        maxDayPerYear: newLeaveType.maxDayPerYear,
+        active: false
+      });
       toast.success("Thêm loại nghỉ phép thành công");
       setLeaveTypes([...leaveTypes, newType]);
-      setNewLeaveType({ name: "", maxDayPerYear: 0 });
+      setNewLeaveType({ name: "", maxDayPerYear: 0, active: false });
       setShowAddLeaveTypeDialog(false);
     } catch (error) {
       console.error("Lỗi khi thêm loại nghỉ phép:", error);
@@ -130,34 +211,100 @@ export default function LeaveBalancePage() {
       setNewLeaveType({
         name: typeToEdit.name,
         maxDayPerYear: typeToEdit.maxDayPerYear,
+        active: typeToEdit.active
       });
       setEditLeaveTypeId(id);
       setShowEditLeaveTypeDialog(true);
     }
   };
 
-  const handleDeleteLeaveType = (id: number) => {
-    if (confirm("Bạn có chắc chắn muốn xóa loại nghỉ phép này không?")) {
-      setLeaveTypes(leaveTypes.filter((type) => type.id !== id));
+  const handleUpdateLeaveType = async () => {
+    if (!editLeaveTypeId) return;
+    try {
+      await leaveTypeApi.updateLeaveType(editLeaveTypeId, {
+        name: newLeaveType.name
+      });
+      const updatedTypes = leaveTypes.map((type) =>
+        type.id === editLeaveTypeId
+          ? {
+              ...type,
+              name: newLeaveType.name,
+            }
+          : type
+      );
+      setLeaveTypes(updatedTypes);
+      setShowEditLeaveTypeDialog(false);
+      resetLeaveTypeForm();
+      toast.success("Cập nhật tên loại nghỉ phép thành công");
+    } catch (error) {
+      console.error("Lỗi khi cập nhật loại nghỉ phép:", error);
+      toast.error("Đã xảy ra lỗi khi cập nhật loại nghỉ phép");
+    }
+  };
+
+
+  // 4. Thêm các hàm xử lý cancel và confirm
+  const handleDeleteCancel = () => {
+    setDeleteDialog({
+      isOpen: false,
+      leaveTypeId: null,
+      leaveTypeName: "",
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deleteDialog.leaveTypeId === null) return;
+
+    try {
+      // Gọi API xóa loại nghỉ phép
+
+      // Cập nhật state sau khi xóa thành công
+      setLeaveTypes((prev) =>
+        prev.filter((type) => type.id !== deleteDialog.leaveTypeId)
+      );
+      toast.success("Xóa loại nghỉ phép thành công");
+    } catch (error) {
+      console.error("Lỗi khi xóa loại nghỉ phép:", error);
+      toast.error("Đã xảy ra lỗi khi xóa loại nghỉ phép");
+    } finally {
+      handleDeleteCancel();
     }
   };
 
   const resetLeaveTypeForm = () => {
-    setNewLeaveType({ name: "", maxDayPerYear: 0 });
+    setNewLeaveType({ name: "", maxDayPerYear: 0, active: false });
     setEditLeaveTypeId(null);
   };
 
-  const filteredBalances = Object.values(employeeBalances).filter(
-    ({ employee }) => {
-      const matchesSearch = employee.name
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-      const matchesDepartment =
-        selectedDepartment === "all" ||
-        employee.department === selectedDepartment;
-      return matchesSearch && matchesDepartment;
+  const onPageChange = (page: number) => {
+    setCurrentPage(page);
+    const newParams = new URLSearchParams(params);
+    newParams.set("page", page.toString());
+    setParams(newParams);
+  };
+
+  const handleToggleApply = async (id: number) => {
+    const typeToToggle = leaveTypes.find((type) => type.id === id);
+    if (typeToToggle) {
+      try {
+        await leaveTypeApi.toggleApply(id);
+        toast.success("Trạng thái áp dụng đã được thay đổi thành công");
+        loadLeaveBalanceTypes();
+        loadLeaveBalances();
+        const updatedTypes = leaveTypes.map((type) =>
+          type.id === id ? { ...type, active: !type.active } : type
+        );
+        setLeaveTypes(updatedTypes);
+      } catch (error) {
+        console.error("Lỗi khi thay đổi trạng thái áp dụng:", error);
+        toast.error("Đã xảy ra lỗi khi thay đổi trạng thái áp dụng");
+      }
     }
-  );
+  };
+
+  if (loading) {
+    return <Spinner layout="admin" />;
+  }
 
   return (
     <AdminLayout>
@@ -182,6 +329,7 @@ export default function LeaveBalancePage() {
                 <Users className="h-4 w-4" />
                 Danh sách nhân viên
               </TabsTrigger>
+
               <TabsTrigger
                 value="leave-types"
                 className="flex items-center gap-2"
@@ -193,135 +341,212 @@ export default function LeaveBalancePage() {
 
             <TabsContent value="employees">
               <div className="space-y-4">
-                <div className="flex flex-col md:flex-row gap-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Tìm kiếm nhân viên..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-8"
-                    />
+                <div className="bg-muted/50 py-2 rounded-lg mb-6 px-2">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div>
+                      <Label className="text-sm font-medium mb-1">
+                        Tìm kiếm nhân viên
+                      </Label>
+                      <div className="relative">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Tìm kiếm nhân viên..."
+                          value={filterLeaveBalances.employeeName}
+                          onChange={(e) =>
+                            setFilterLeaveBalances((prev) => ({
+                              ...prev,
+                              employeeName: e.target.value,
+                            }))
+                          }
+                          className="pl-8 w-full sm:w-[220px]"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium mb-1">Năm</Label>
+                      <Select
+                        value={filterLeaveBalances.year.toString()}
+                        onValueChange={(value) =>
+                          setFilterLeaveBalances((prev) => ({
+                            ...prev,
+                            year: parseInt(value),
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Chọn năm" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getYearOptions().map((year) => (
+                            <SelectItem key={year} value={year.toString()}>
+                              {year}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium mb-1">
+                        Phòng ban
+                      </Label>
+                      <Select
+                        value={
+                          filterLeaveBalances.departmentId === 0
+                            ? "all"
+                            : filterLeaveBalances.departmentId.toString()
+                        }
+                        onValueChange={(value) =>
+                          setFilterLeaveBalances((prev) => ({
+                            ...prev,
+                            departmentId: value === "all" ? 0 : parseInt(value),
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Phòng ban" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tất cả phòng ban</SelectItem>
+                          {departments?.map((dept) => (
+                            <SelectItem
+                              key={dept.id}
+                              value={dept.id.toString()}
+                            >
+                              {dept.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium mb-1">
+                        Loại nghỉ phép
+                      </Label>
+                      <Select
+                        value={filterLeaveBalances.leaveBalanceType}
+                        onValueChange={(value) =>
+                          setFilterLeaveBalances((prev) => ({
+                            ...prev,
+                            leaveBalanceType: value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Chọn loại nghỉ phép" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tất cả</SelectItem>
+                          {leaveBalanceTypes.map((type) => (
+                            <SelectItem key={type.id} value={type.name}>
+                              {type.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button
+                      className="w-full sm:w-auto self-end"
+                      onClick={() => handleFilterLeaveBalances()}
+                    >
+                      Lọc
+                    </Button>
                   </div>
-                  <Select value={selectedYear} onValueChange={setSelectedYear}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Chọn năm" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="2024">2024</SelectItem>
-                      <SelectItem value="2023">2023</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={selectedDepartment}
-                    onValueChange={setSelectedDepartment}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Phòng ban" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tất cả phòng ban</SelectItem>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept} value={dept || ""}>
-                          {dept}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </div>
 
                 <div className="rounded-md border">
-                  {loading && (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Nhân viên</TableHead>
-                          <TableHead>Phòng ban</TableHead>
-                          <TableHead>Chức vụ</TableHead>
-                          {leaveTypes.map((type) => (
-                            <TableHead key={type.id} className="text-center">
-                              {type.name}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredBalances.map(({ employee, balances }) => (
-                          <TableRow key={employee.id}>
-                            <TableCell className="font-medium">
-                              {employee.name}
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b bg-muted/50">
+                        <TableHead>STT</TableHead>
+                        <TableHead>Nhân viên</TableHead>
+                        <TableHead>Phòng ban</TableHead>
+                        <TableHead>Năm</TableHead>
+                        <TableHead>Số ngày nghỉ đã dùng</TableHead>
+                        <TableHead>Số ngày nghỉ còn lại</TableHead>
+                        <TableHead>Loại nghỉ phép</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {leaveBalances.length > 0 ? (
+                        leaveBalances?.map((balance, index) => (
+                          <TableRow key={balance.id}>
+                            <TableCell className="p-2">
+                              {(currentPage - 1) * 10 + index + 1}
                             </TableCell>
-                            <TableCell>{employee.department}</TableCell>
-                            <TableCell>{employee.position}</TableCell>
-                            {leaveTypes.map((type) => {
-                              const balance = balances.find(
-                                (b) => b.leaveType.id === type.id
-                              );
-                              return (
-                                <TableCell
-                                  key={type.id}
-                                  className="text-center"
-                                >
-                                  {balance ? (
-                                    <div className="flex flex-col items-center gap-1">
-                                      <Badge
-                                        variant={
-                                          balance.remainingDay > 0
-                                            ? "default"
-                                            : "destructive"
-                                        }
-                                      >
-                                        {balance.remainingDay}/
-                                        {type.maxDayPerYear}
-                                      </Badge>
-                                      <span className="text-xs text-muted-foreground">
-                                        Đã dùng: {balance.usedDay}
-                                      </span>
-                                    </div>
-                                  ) : (
-                                    <Badge variant="outline">
-                                      {type.maxDayPerYear}/{type.maxDayPerYear}
-                                    </Badge>
-                                  )}
-                                </TableCell>
-                              );
-                            })}
+                            <TableCell>{balance.employeeName}</TableCell>
+                            <TableCell>{balance.departmentName}</TableCell>
+                            <TableCell>{balance.year}</TableCell>
+                            <TableCell>{balance.usedDay} ngày</TableCell>
+                            <TableCell>{balance.remainingDay} ngày</TableCell>
+                            <TableCell>{balance.leaveType.name}</TableCell>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell
+                            colSpan={8}
+                            className="p-4 text-center text-muted-foreground"
+                          >
+                            Không có dữ liệu nghỉ phép nào
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+
+                  <PaginationComponent
+                    currentPage={currentPage}
+                    totalPage={totalPage}
+                    onPageChange={onPageChange}
+                  />
+                </div>
+                <div className="flex justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Tổng số: {totalItems} bản ghi
+                  </div>
                 </div>
               </div>
             </TabsContent>
 
             <TabsContent value="leave-types">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Danh sách loại nghỉ phép</CardTitle>
+              <div className="space-y-4">
+                <div className="flex justify-end items-center">
                   <Button onClick={() => setShowAddLeaveTypeDialog(true)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Thêm loại nghỉ phép
                   </Button>
-                </CardHeader>
-                <CardContent>
+                </div>
+
+                <div className="rounded-md border">
                   <Table>
                     <TableHeader>
-                      <TableRow>
+                      <TableRow className="border-b bg-muted/50">
                         <TableHead>STT</TableHead>
                         <TableHead>Tên loại nghỉ phép</TableHead>
                         <TableHead>Số ngày tối đa mỗi năm</TableHead>
+                        <TableHead>Trạng thái</TableHead>
                         <TableHead className="text-right">Thao tác</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {leaveTypes.map((type) => (
-                        <TableRow key={type.id}>
-                          <TableCell>
-                            {leaveTypes.findIndex((t) => t.id === type.id) + 1}
+                      {leaveTypes.map((type, index) => (
+                        <TableRow key={type.id} className="border-b">
+                          <TableCell className="p-2">
+                            {(currentPage - 1) * 10 + index + 1}
                           </TableCell>
                           <TableCell>{type.name}</TableCell>
                           <TableCell>{type.maxDayPerYear} ngày</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              type.active ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {type.active ? 'Đã áp dụng' : 'Chưa áp dụng'}
+                            </span>
+                          </TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="ghost"
@@ -334,19 +559,34 @@ export default function LeaveBalancePage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-destructive"
-                              onClick={() => handleDeleteLeaveType(type.id)}
+                              className={type.active ? "text-yellow-600" : "text-green-600"}
+                              onClick={() => handleToggleApply(type.id)}
                             >
-                              <Trash className="mr-2 h-4 w-4" />
-                              Xóa
+                              {type.active ? (
+                                <>
+                                  <X className="mr-2 h-4 w-4" />
+                                  Hủy áp dụng
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="mr-2 h-4 w-4" />
+                                  Áp dụng
+                                </>
+                              )}
                             </Button>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
-                </CardContent>
-              </Card>
+                </div>
+
+                <div className="flex justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Tổng số: {leaveTypes?.length || 0}
+                  </div>
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -438,23 +678,6 @@ export default function LeaveBalancePage() {
                 }
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-maxDayPerYear" className="text-right">
-                Số ngày tối đa
-              </Label>
-              <Input
-                id="edit-maxDayPerYear"
-                type="number"
-                className="col-span-3"
-                value={newLeaveType.maxDayPerYear}
-                onChange={(e) =>
-                  setNewLeaveType({
-                    ...newLeaveType,
-                    maxDayPerYear: parseInt(e.target.value),
-                  })
-                }
-              />
-            </div>
           </div>
           <DialogFooter className="mt-6">
             <Button
@@ -467,29 +690,20 @@ export default function LeaveBalancePage() {
             >
               Hủy
             </Button>
-            <Button
-              onClick={() => {
-                if (editLeaveTypeId) {
-                  const updatedTypes = leaveTypes.map((type) =>
-                    type.id === editLeaveTypeId
-                      ? {
-                          ...type,
-                          name: newLeaveType.name,
-                          maxDayPerYear: newLeaveType.maxDayPerYear,
-                        }
-                      : type
-                  );
-                  setLeaveTypes(updatedTypes);
-                  setShowEditLeaveTypeDialog(false);
-                  resetLeaveTypeForm();
-                }
-              }}
-            >
+            <Button onClick={handleUpdateLeaveType}>
               Lưu thay đổi
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DeleteConfirmationDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        itemName={deleteDialog.leaveTypeName}
+        description="Bạn có chắc chắn muốn xóa loại nghỉ phép"
+      />
     </AdminLayout>
   );
 }

@@ -20,6 +20,15 @@ import { Label } from "@/components/ui/label";
 import { Plus, Pencil } from "lucide-react";
 import { AdminLayout } from "@/components/admin-layout";
 import { departmentApi } from "@/services/department.service";
+import Spinner from "@/components/Spinner";
+import { toast } from "sonner";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface Department {
   id: number;
@@ -35,11 +44,14 @@ export default function DepartmentsPage() {
     null
   );
   const [editDepartmentName, setEditDepartmentName] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchDepartments = async () => {
+      setLoading(true);
       const data = await departmentApi.getAllDepartments();
       if (data) setDepartments(data);
+      setLoading(false);
     };
     fetchDepartments();
   }, []);
@@ -51,6 +63,8 @@ export default function DepartmentsPage() {
       name: newDepartmentName.trim(),
     });
     if (newDept) {
+      toast.success("Thêm phòng ban thành công!");
+
       setDepartments((prev) => [...prev, newDept]);
       setNewDepartmentName("");
       setOpen(false);
@@ -74,6 +88,7 @@ export default function DepartmentsPage() {
           dept.id === editingDepartment.id ? updatedDept : dept
         )
       );
+      toast.success("Cập nhật phòng ban thành công!");
       setEditOpen(false);
       setEditingDepartment(null);
       setEditDepartmentName("");
@@ -86,70 +101,81 @@ export default function DepartmentsPage() {
     setEditOpen(true);
   };
 
+  if (loading) return <Spinner layout="admin" />;
+
   return (
     <AdminLayout>
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Quản lý phòng ban</h1>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Thêm phòng ban
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Thêm phòng ban mới</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Tên phòng ban</Label>
-                  <Input
-                    id="name"
-                    value={newDepartmentName}
-                    onChange={(e) => setNewDepartmentName(e.target.value)}
-                    placeholder="Nhập tên phòng ban"
-                  />
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <CardTitle>Quản lý phòng ban</CardTitle>
+              <CardDescription>Quản lý các phòng ban</CardDescription>
+            </div>
+          </div>
+          <div className="text-right">
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Thêm phòng ban
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Thêm phòng ban mới</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Tên phòng ban</Label>
+                    <Input
+                      id="name"
+                      value={newDepartmentName}
+                      onChange={(e) => setNewDepartmentName(e.target.value)}
+                      placeholder="Nhập tên phòng ban"
+                    />
+                  </div>
+                  <Button onClick={handleAddDepartment}>Thêm phòng ban</Button>
                 </div>
-                <Button onClick={handleAddDepartment}>Thêm phòng ban</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
 
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[100px]">STT</TableHead>
-                <TableHead>Tên phòng ban</TableHead>
-                <TableHead className="w-[100px]">Thao tác</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {departments.map((department) => (
-                <TableRow key={department.id}>
-                  <TableCell>
-                    {departments.findIndex(
-                      (dept) => dept.id === department.id
-                    ) + 1}
-                  </TableCell>
-                  <TableCell>{department.name}</TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openEditModal(department)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+        <CardContent>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b bg-muted/50">
+                  <TableHead className="w-[100px]">STT</TableHead>
+                  <TableHead>Tên phòng ban</TableHead>
+                  <TableHead className="w-[100px]">Thao tác</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {departments.map((department) => (
+                  <TableRow key={department.id}>
+                    <TableCell>
+                      {departments.findIndex(
+                        (dept) => dept.id === department.id
+                      ) + 1}
+                    </TableCell>
+                    <TableCell>{department.name}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditModal(department)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
 
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
           <DialogContent>
@@ -170,7 +196,7 @@ export default function DepartmentsPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
+      </Card>
     </AdminLayout>
   );
 }

@@ -1,8 +1,13 @@
-import http from '@/utils/http';
+import http from "@/utils/http";
 
 export const leaveBalanceApi = {
-  getLeaveBalanceByEmployeeId: async (employeeId: number) => {
-    const response = await http.get(`/leave-balances/employee/${employeeId}`);
+  getLeaveBalanceByEmployee: async () => {
+    const response = await http.get(`/leave-balances/employee`);
     return response.data;
   },
-}; 
+
+  getAllLeaveBalance: async (params: any) => {
+    const response = await http.get("/leave-balances", { params });
+    return response.data;
+  },
+};
