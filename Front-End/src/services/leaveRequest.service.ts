@@ -6,7 +6,6 @@ export const leaveRequestApi = {
     const response = await http.get(`/leave-requests`, {
       params: dataFilter,
     });
-
     return response.data.data;
   },
 

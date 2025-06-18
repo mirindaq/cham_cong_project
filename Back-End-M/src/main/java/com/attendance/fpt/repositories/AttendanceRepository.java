@@ -35,4 +35,13 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
               "WHERE  a.workShiftAssignment.dateAssign = :date" +
             " AND a.status = :status")
     long countByDateAndStatus(@Param("date") LocalDate date,  @Param("status") AttendanceStatus status);
+
+    @Query(" select  a from Attendance a " +
+            "where a.workShiftAssignment.dateAssign = :workShiftAssignmentDateAssign " +
+            "and a.workShiftAssignment.workShift.id = :workShiftId " +
+            "and a.status = :status")
+    Optional<Attendance> findByAttendanceLeaveByDateAndWorkShiftIdAndStatus(
+            @Param("workShiftAssignmentDateAssign") LocalDate workShiftAssignmentDateAssign,
+            @Param("workShiftId") Long workShiftId,
+            @Param("status") AttendanceStatus status);
 }

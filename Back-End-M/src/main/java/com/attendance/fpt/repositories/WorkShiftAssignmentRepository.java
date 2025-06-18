@@ -2,6 +2,7 @@ package com.attendance.fpt.repositories;
 
 import com.attendance.fpt.entity.Attendance;
 import com.attendance.fpt.entity.Employee;
+import com.attendance.fpt.entity.WorkShift;
 import com.attendance.fpt.entity.WorkShiftAssignment;
 import com.attendance.fpt.enums.AttendanceStatus;
 import org.springframework.data.domain.Page;
@@ -114,6 +115,5 @@ public interface WorkShiftAssignmentRepository extends JpaRepository<WorkShiftAs
     Page<WorkShiftAssignment> getAllWorkShiftAttendanceByFilterAndAbsent(@Param("employeeName") String employeeName,
                                                                 @Param("date") LocalDate date,
                                                                 Pageable pageable);
-
 
 }

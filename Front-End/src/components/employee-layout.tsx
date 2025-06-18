@@ -21,6 +21,7 @@ import {
   FileText,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import Notification from "@/components/Notification";
 
 interface EmployeeLayoutProps {
   children: ReactNode;
@@ -49,6 +50,11 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
       href: "/employee/disputes",
       icon: FileText,
     },
+    ...(user?.employeeType === "PART_TIME" ? [{
+      name: "Đơn đăng ký làm part-time",
+      href: "/employee/part-time",
+      icon: FileText,
+    }] : []),
     { name: "Hồ sơ cá nhân", href: "/employee/profile", icon: User },
   ];
 
@@ -94,6 +100,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
             </Link>
           </div>
           <div className="flex items-center gap-4">
+            <Notification />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">

@@ -12,4 +12,6 @@ public class WorkShiftResponse {
     private String name;
     private LocalTime startTime;
     private LocalTime endTime;
+    private boolean isPartTime;
+    private boolean active;
 }

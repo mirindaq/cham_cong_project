@@ -32,13 +32,17 @@ export const leaveTypeApi = {
   },
 
   updateLeaveType: async (leaveTypeId: number, leaveTypeUpdateRequest: any) => {
-    const response = await http.put(`/leave-types/update/${leaveTypeId}`, leaveTypeUpdateRequest);
+    const response = await http.put(
+      `/leave-types/update/${leaveTypeId}`,
+      leaveTypeUpdateRequest
+    );
     return response.data.data;
   },
 
   toggleApply: async (leaveTypeId: number) => {
-    const response = await http.put(`/leave-types/update/${leaveTypeId}/status`);
+    const response = await http.put(
+      `/leave-types/update/${leaveTypeId}/status`
+    );
     return response.data.data;
   },
-
 };

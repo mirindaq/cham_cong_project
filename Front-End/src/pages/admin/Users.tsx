@@ -367,6 +367,9 @@ function UsersPage() {
                     Vai trò
                   </TableHead>
                   <TableHead className="p-2 text-left font-medium">
+                    Loại nhân viên
+                  </TableHead>
+                  <TableHead className="p-2 text-left font-medium">
                     Phòng ban
                   </TableHead>
                   <TableHead className="p-2 text-left font-medium">
@@ -405,7 +408,18 @@ function UsersPage() {
                         )}
                       </TableCell>
                       <TableCell className="p-2">
-                        {user.departmentName}
+                        {user.employeeType === "FULL_TIME" ? (
+                          <Badge className="bg-green-500 text-white">
+                            Toàn thời gian
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-blue-500 text-white">
+                            Bán thời gian
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="p-2">
+                        {user.departmentName || "Chưa có phòng ban"}
                       </TableCell>
                       <TableCell className="p-2">
                         {getStatusBadge(user.active)}

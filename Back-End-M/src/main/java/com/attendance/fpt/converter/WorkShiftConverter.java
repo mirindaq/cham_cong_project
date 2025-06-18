@@ -11,6 +11,8 @@ public class WorkShiftConverter {
                 .startTime(workShift.getStartTime())
                 .endTime(workShift.getEndTime())
                 .id(workShift.getId())
+                .isPartTime(workShift.isPartTime())
+                .active(workShift.isActive())
                 .build();
     }
 }

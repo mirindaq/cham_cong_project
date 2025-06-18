@@ -82,7 +82,7 @@ function DisputesPage() {
 
   const loadComplaints = useCallback(async () => {
     setLoading(true);
-  
+
     try {
       const response = await complaintApi.getAllComplaintsByEmployee(
         currentPage,
@@ -134,11 +134,9 @@ function DisputesPage() {
 
   const handleRecall = async (id: number) => {
     if (window.confirm("Bạn có chắc chắn muốn thu hồi đơn khiếu nại này?")) {
-
       await complaintApi.recallComplaint(id);
       toast.success("Đã thu hồi đơn thành công!");
       loadComplaints();
-
     }
   };
 
@@ -275,10 +273,10 @@ function DisputesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {complaints.map((complaint) => (
+                  {complaints.map((complaint, index) => (
                     <TableRow key={complaint.id}>
                       <TableCell>
-                        {complaints.findIndex((c) => c.id === complaint.id) + 1}
+                        {(currentPage - 1) * 10 + index + 1}
                       </TableCell>
                       <TableCell>
                         {complaint.date
@@ -288,9 +286,9 @@ function DisputesPage() {
                       <TableCell>
                         {complaint.createdAt
                           ? format(
-                            parseISO(complaint.createdAt),
-                            "dd/MM/yyyy HH:mm:ss"
-                          )
+                              parseISO(complaint.createdAt),
+                              "dd/MM/yyyy HH:mm:ss"
+                            )
                           : "N/A"}
                       </TableCell>
                       <TableCell>
@@ -299,8 +297,12 @@ function DisputesPage() {
                         ] ?? complaint.complaintType}
                       </TableCell>
                       <TableCell>{complaint.reason}</TableCell>
-                      <TableCell>{complaint.responseDate}</TableCell>
-                      <TableCell>{complaint.responseBy}</TableCell>
+                      <TableCell>
+                        {complaint.responseDate || "Chưa phản hồi"}
+                      </TableCell>
+                      <TableCell>
+                        {complaint.responseBy || "Chưa phản hồi"}
+                      </TableCell>
                       <TableCell>{getStatusBadge(complaint.status)}</TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -334,7 +336,10 @@ function DisputesPage() {
                   ))}
                   {complaints.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center">
+                      <TableCell
+                        colSpan={9}
+                        className="p-4 text-center text-muted-foreground"
+                      >
                         Không có khiếu nại nào
                       </TableCell>
                     </TableRow>
@@ -408,9 +413,9 @@ function DisputesPage() {
                     <span className="text-sm font-medium">
                       {selectedDetail.createdAt
                         ? format(
-                          parseISO(selectedDetail.createdAt),
-                          "dd/MM/yyyy HH:mm:ss"
-                        )
+                            parseISO(selectedDetail.createdAt),
+                            "dd/MM/yyyy HH:mm:ss"
+                          )
                         : "N/A"}
                     </span>
                   </div>
@@ -443,55 +448,55 @@ function DisputesPage() {
                 {/* Thông tin duyệt */}
                 {(selectedDetail.status === "APPROVED" ||
                   selectedDetail.status === "REJECTED") && (
-                    <div className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground font-medium">
+                        Thông tin duyệt:
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground font-medium">
-                          Thông tin duyệt:
+                        <UserIcon className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          Người duyệt:
+                        </span>
+                        <span className="text-sm font-medium">
+                          {selectedDetail.responseBy || "Không có"}
                         </span>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="flex items-center gap-2">
-                          <UserIcon className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">
-                            Người duyệt:
-                          </span>
-                          <span className="text-sm font-medium">
-                            {selectedDetail.responseBy || "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">
-                            Ngày duyệt:
-                          </span>
-                          <span className="text-sm font-medium">
-                            {selectedDetail.responseDate
-                              ? format(
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          Ngày duyệt:
+                        </span>
+                        <span className="text-sm font-medium">
+                          {selectedDetail.responseDate
+                            ? format(
                                 parseISO(selectedDetail.responseDate),
                                 "dd/MM/yyyy HH:mm:ss"
                               )
-                              : "N/A"}
-                          </span>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <AlertCircle className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground font-medium">
-                            Lý do{" "}
-                            {selectedDetail.status === "APPROVED"
-                              ? "duyệt"
-                              : "từ chối"}
-                            :
-                          </span>
-                        </div>
-                        <div className="bg-gray-50 border rounded p-3 text-sm text-gray-700 whitespace-pre-line">
-                          {selectedDetail.responseNote || "N/A"}
-                        </div>
+                            : "N/A"}
+                        </span>
                       </div>
                     </div>
-                  )}
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <AlertCircle className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground font-medium">
+                          Lý do{" "}
+                          {selectedDetail.status === "APPROVED"
+                            ? "duyệt"
+                            : "từ chối"}
+                          :
+                        </span>
+                      </div>
+                      <div className="bg-gray-50 border rounded p-3 text-sm text-gray-700 whitespace-pre-line">
+                        {selectedDetail.responseNote || "N/A"}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

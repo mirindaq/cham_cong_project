@@ -124,7 +124,7 @@ http.interceptors.response.use(
           toast.error("Không tìm thấy tài nguyên yêu cầu.");
           break;
         case 409:
-          toast.error("Dữ liệu bị xung đột, vui lòng kiểm tra lại.");
+
           break;
         case 500:
           if (data.message === "Not enough leave balance for this request") {

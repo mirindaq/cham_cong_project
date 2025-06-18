@@ -10,6 +10,7 @@ import com.attendance.fpt.model.request.LeaveRequestHandleRequest;
 import com.attendance.fpt.model.response.*;
 import com.attendance.fpt.repositories.*;
 import com.attendance.fpt.services.LeaveRequestService;
+import com.attendance.fpt.services.NotificationService;
 import com.attendance.fpt.utils.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,14 +30,13 @@ import java.util.stream.Collectors;
 public class LeaveRequestServiceImpl implements LeaveRequestService {
 
     private final LeaveRequestRepository leaveRequestRepository;
-    private final EmployeeRepository employeeRepository;
     private final LeaveTypeRepository leaveTypeRepository;
     private final WorkShiftAssignmentRepository workShiftAssignmentRepository;
     private final LeaveBalanceRepository leaveBalanceRepository;
     private final AttendanceRepository attendanceRepository;
     private final WorkShiftRepository workShiftRepository;
     private final SecurityUtil securityUtil;
-
+    private final NotificationService notificationService;
     @Override
     @Transactional
     public LeaveRequestResponse createLeaveRequest(LeaveRequestAddRequest request) {
@@ -125,6 +125,9 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         leaveRequest.setResponseDate(LocalDateTime.now());
         leaveRequest.setStatus(LeaveRequestStatus.REJECTED);
         leaveRequestRepository.save(leaveRequest);
+
+        notificationService.sendNotification(employee, "Đơn xin nghỉ phép của bạn ngày " +
+                leaveRequest.getStartDate() + " đến " + leaveRequest.getEndDate() + " đã bị từ chối");
     }
 
     @Override
@@ -184,6 +187,10 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         leaveBalance.setUsedDay((leaveBalance.getUsedDay() + totalDays));
         leaveBalance.setRemainingDay(leaveBalance.getRemainingDay() - totalDays);
         leaveBalanceRepository.save(leaveBalance);
+
+        notificationService.sendNotification(leaveRequest.getEmployee(),
+                "Đơn xin nghỉ phép của bạn ngày " + leaveRequest.getStartDate() + " đến " +
+                        leaveRequest.getEndDate() + " đã được phê duyệt");
     }
 
     @Override
@@ -216,18 +223,14 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
             int page,
             int limit,
             String employeeName,
-            LocalDate startDate,
-            LocalDate endDate,
+            LocalDate createDate,
             Long departmentId,
             Long workShiftId,
             Long leaveTypeId,
             String status) {
         Pageable pageable = PageRequest.of(page - 1, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
-
-        LocalDateTime startDateTime = startDate != null ? startDate.atStartOfDay() : null;
-        LocalDateTime endDateTime = endDate != null ? endDate.atTime(23, 59, 59) : null;
         Page<LeaveRequest> leaveRequestPage = leaveRequestRepository.findAllWithFilters(
-                employeeName, startDateTime, endDateTime, departmentId, workShiftId,
+                employeeName, createDate, departmentId, workShiftId,
                 leaveTypeId, status != null ? LeaveRequestStatus.valueOf(status.toUpperCase()) : null, pageable);
 
         List<LeaveRequestResponse> leaveRequestResponses = leaveRequestPage.getContent().stream()

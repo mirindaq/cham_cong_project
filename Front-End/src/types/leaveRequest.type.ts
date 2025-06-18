@@ -1,4 +1,5 @@
 import type { LeaveType } from "./leaveType";
+import type { WorkShiftResponse } from "@/types/workShift.type";
 
 export type LeaveRequestAdd = {
   startDate: Date;
@@ -21,6 +22,7 @@ export type LeaveRequestResponse = {
   status: string;
   departmentName: string;
   createdAt: string;
+  workShift: WorkShiftResponse;
 };
 
 export enum LeaveRequestStatus {

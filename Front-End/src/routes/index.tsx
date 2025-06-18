@@ -19,6 +19,11 @@ import ChangePasswordFirstLogin from "../pages/ChangePasswordFirstLogin";
 import AttendancePage from "../pages/admin/Attendance";
 import ProtectedRoute from "../utils/ProtectedRoute";
 import PublicRoute from "../utils/PublicRoute";
+import PartTime from "@/pages/employee/PartTime";
+import LeaveRequestApprovalPage from "@/pages/admin/LeaveRequestApprovalPage";
+import ComplaintApprovalPage from "@/pages/admin/ComplaintApprovalPage";
+import PartTimeRequestApprovalPage from "@/pages/admin/PartTimeRequestApprovalPage";
+import RevertLeaveRequestApprovalPage from "@/pages/admin/RevertLeaveRequestApprovalPage";
 
 export const routes = [
   {
@@ -89,6 +94,14 @@ export const routes = [
           </ProtectedRoute>
         ),
       },
+      {
+        path: "part-time",
+        element: (
+          <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
+            <PartTime />
+          </ProtectedRoute>
+        ),
+      },
     ],
   },
   // Admin routes
@@ -143,11 +156,43 @@ export const routes = [
           </ProtectedRoute>
         ),
       },
+      // {
+      //   path: "approvals",
+      //   element: (
+      //     <ProtectedRoute allowedRoles={["ADMIN"]}>
+      //       <ApprovalsPage />
+      //     </ProtectedRoute>
+      //   ),
+      // },
       {
-        path: "approvals",
+        path: "complaint-approvals",
         element: (
           <ProtectedRoute allowedRoles={["ADMIN"]}>
-            <ApprovalsPage />
+            <ComplaintApprovalPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "leave-approvals",
+        element: (
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <LeaveRequestApprovalPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "part-time-approvals",
+        element: (
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <PartTimeRequestApprovalPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "revert-leave-approvals",
+        element: (
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <RevertLeaveRequestApprovalPage />
           </ProtectedRoute>
         ),
       },
@@ -194,4 +239,4 @@ export const routes = [
     path: "*",
     element: <NotFoundPage />,
   },
-]; 
+];

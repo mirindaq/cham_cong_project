@@ -28,7 +28,7 @@ import {
   isAfter,
 } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2 } from "lucide-react";
+import { Check, Delete, Edit, Plus, Trash, Trash2, X } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -52,10 +52,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { UserResponse } from "@/types/user.type";
-import type {
-  WorkShift,
-  WorkShiftAssignment,
-} from "@/types/workShiftAssignment.type";
+import type { WorkShiftAssignment } from "@/types/workShiftAssignment.type";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
 import { shiftAssignmentApi } from "@/services/shiftAssignment.service";
@@ -66,14 +63,22 @@ import { useSearchParams } from "react-router";
 import { workShiftApi } from "@/services/workShift.service";
 import Spinner from "@/components/Spinner";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
+import type {
+  WorkShiftAddRequest,
+  WorkShiftResponse,
+} from "@/types/workShift.type";
+import { Badge } from "@/components/ui/badge";
 
 export default function ShiffAssignment() {
-  const [shifts, setShifts] = useState<WorkShift[]>([]);
+  const [shifts, setShifts] = useState<WorkShiftResponse[]>([]);
+  const [activeShifts, setActiveShifts] = useState<WorkShiftResponse[]>([]);
   const [showAddShift, setShowAddShift] = useState(false);
-  const [newShift, setNewShift] = useState({
+  const [newShift, setNewShift] = useState<WorkShiftAddRequest>({
     name: "",
     startTime: "",
-    endTime: "",
+    endTime: "",  
+    partTime: false,
+    active: true,
   });
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -113,16 +118,27 @@ export default function ShiffAssignment() {
     shiftName: "",
   });
 
+  const getStatusBadge = (active: boolean) => {
+    return active ? (
+      <Badge className="bg-green-500">Hoạt động</Badge>
+    ) : (
+      <Badge variant="secondary">Vô hiệu hóa</Badge>
+    );
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
-      const [shiftsData, usersData, departmentsData] = await Promise.all([
-        workShiftApi.getAllShifts(),
-        userApi.getEmployeeToAssignment(),
-        departmentApi.getAllDepartments(),
-      ]);
+      const [activeShifts, shiftsData, usersData, departmentsData] =
+        await Promise.all([
+          workShiftApi.getAllWorkShiftsActive(),
+          workShiftApi.getAllShifts(),
+          userApi.getEmployeeToAssignment(),
+          departmentApi.getAllDepartments(),
+        ]);
 
       if (shiftsData) setShifts(shiftsData);
+      if (activeShifts) setActiveShifts(activeShifts);
       if (usersData) setUsers(usersData);
       if (departmentsData) setDepartments(departmentsData);
       setIsLoading(false);
@@ -130,6 +146,7 @@ export default function ShiffAssignment() {
 
     fetchData();
   }, []);
+
 
   useEffect(() => {
     const fetchAssignments = async () => {
@@ -162,7 +179,13 @@ export default function ShiffAssignment() {
     const addedShift = await workShiftApi.addShift(newShift);
     setShifts((prev) => [...prev, addedShift]);
     setShowAddShift(false);
-    setNewShift({ name: "", startTime: "", endTime: "" });
+    setNewShift({
+      name: "",
+      startTime: "",
+      endTime: "",
+      partTime: false,
+      active: true,
+    });
     toast.success("Thêm ca làm việc thành công!");
   };
 
@@ -246,6 +269,36 @@ export default function ShiffAssignment() {
       toast.error("Không thể xóa ca làm. Vui lòng thử lại sau.");
     } finally {
       handleDeleteShiftCancel();
+    }
+  };
+
+  const handleUpdateStatus = async (shiftId: number) => {
+    try {
+      const response = await workShiftApi.updateWorkShift(shiftId);
+      if (response) {
+        setShifts((prev) =>
+          prev.map((shift) =>
+            shift.id === shiftId ? { ...shift, active: !shift.active } : shift
+          )
+        );
+        
+        setActiveShifts((prev) => {
+          if (response.active) {
+            const shiftToAdd = shifts.find((shift) => shift.id === shiftId);
+            return shiftToAdd ? [...prev, shiftToAdd] : prev;
+          } else {
+            return prev.filter((shift) => shift.id !== shiftId);
+          }
+        });
+
+        toast.success(
+          `Đã ${
+            response.active ? "kích hoạt" : "vô hiệu hóa"
+          } ca làm việc thành công!`
+        );
+      }
+    } catch (error) {
+      toast.error("Đã xảy ra lỗi khi cập nhật trạng thái ca làm việc");
     }
   };
 
@@ -412,6 +465,12 @@ export default function ShiffAssignment() {
                           Kết thúc
                         </TableHead>
                         <TableHead className="p-2 text-left">
+                          Loại hình làm việc
+                        </TableHead>
+                        <TableHead className="p-2 text-left">
+                          Trạng thái
+                        </TableHead>
+                        <TableHead className="p-2 text-left">
                           Thao tác
                         </TableHead>
                       </TableRow>
@@ -441,13 +500,52 @@ export default function ShiffAssignment() {
                           </TableCell>
                           <TableCell className="p-2">{shift.endTime}</TableCell>
                           <TableCell className="p-2">
+                            <Badge
+                              className={
+                                shift.partTime
+                                  ? "bg-blue-500  text-white"
+                                  : "bg-green-500  text-white"
+                              }
+                            >
+                              {shift.partTime ? "Part Time" : "Full Time"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="p-2">
+                            {getStatusBadge(shift.active)}
+                          </TableCell>
+                          <TableCell className="p-2 flex items-center gap-2">
+                            <div className="w-[160px]">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className={
+                                  shift.active
+                                    ? "text-yellow-600"
+                                    : "text-green-600"
+                                }
+                                onClick={() => handleUpdateStatus(shift.id)}
+                              >
+                                {shift.active ? (
+                                  <>
+                                    <X className="mr-2 h-4 w-4" />
+                                    Hủy áp dụng
+                                  </>
+                                ) : (
+                                  <>
+                                    <Check className="mr-2 h-4 w-4" />
+                                    Áp dụng
+                                  </>
+                                )}
+                              </Button>
+                            </div>
                             <Button
                               variant="ghost"
-                              size="icon"
+                              size="sm"
+                              className="text-red-600"
                               onClick={() => handleDeleteShift(shift.id)}
-                              className="hover:bg-destructive/10"
                             >
-                              <Trash2 className="h-4 w-4 text-destructive" />
+                              <Trash className="mr-2 h-4 w-4 text-red-600 " />
+                              Xoá
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -905,7 +1003,7 @@ export default function ShiffAssignment() {
                         />
                       </div>
                       <div className="max-h-[300px] overflow-y-auto space-y-2">
-                        {shifts
+                        {activeShifts
                           .filter(
                             (shift) =>
                               shift.name
@@ -1057,38 +1155,91 @@ export default function ShiffAssignment() {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label>Tên ca</Label>
+                <Label htmlFor="shift-name">Tên ca</Label>
                 <Input
+                  id="shift-name"
                   value={newShift.name}
                   onChange={(e) =>
-                    setNewShift((s) => ({ ...s, name: e.target.value }))
+                    setNewShift((s) => ({
+                      ...s,
+                      name: e.target.value,
+                    }))
                   }
                   placeholder="Nhập tên ca"
+                  required
                 />
               </div>
+
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <Label>Giờ bắt đầu</Label>
+                  <Label htmlFor="start-time">Giờ bắt đầu</Label>
                   <Input
+                    id="start-time"
                     type="time"
                     value={newShift.startTime}
                     onChange={(e) =>
                       setNewShift((s) => ({ ...s, startTime: e.target.value }))
                     }
+                    required
                   />
                 </div>
                 <div className="flex-1">
-                  <Label>Giờ kết thúc</Label>
+                  <Label htmlFor="end-time">Giờ kết thúc</Label>
                   <Input
+                    id="end-time"
                     type="time"
                     value={newShift.endTime}
                     onChange={(e) =>
                       setNewShift((s) => ({ ...s, endTime: e.target.value }))
                     }
+                    required
                   />
                 </div>
               </div>
+
+              <div>
+                <Label htmlFor="shift-type">Loại ca làm việc</Label>
+                <Select
+                  value={newShift.partTime ? "parttime" : "fulltime"}
+                  onValueChange={(value) =>
+                    setNewShift((s) => ({
+                      ...s,
+                      partTime: value === "parttime",
+                    }))
+                  }
+                >
+                  <SelectTrigger id="shift-type">
+                    <SelectValue placeholder="Chọn loại ca làm việc" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fulltime">
+                      Toàn thời gian (Full-time)
+                    </SelectItem>
+                    <SelectItem value="parttime">
+                      Bán thời gian (Part-time)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="space-y-0.5">
+                  <Label htmlFor="is-active">Áp dụng ca làm việc</Label>
+                </div>
+                <input
+                  id="is-active"
+                  type="checkbox"
+                  checked={newShift.active}
+                  onChange={(e) =>
+                    setNewShift((s) => ({
+                      ...s,
+                      active: e.target.checked,
+                    }))
+                  }
+                />
+              </div>
             </div>
+
             <DialogFooter>
               <Button onClick={handleAddShift}>Thêm</Button>
             </DialogFooter>

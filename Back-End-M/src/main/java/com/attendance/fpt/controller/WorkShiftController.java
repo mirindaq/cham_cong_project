@@ -1,6 +1,7 @@
 package com.attendance.fpt.controller;
 
 import com.attendance.fpt.model.request.WorkShiftRequest;
+import com.attendance.fpt.model.response.LeaveTypeResponse;
 import com.attendance.fpt.model.response.WorkShiftResponse;
 import com.attendance.fpt.model.response.ResponseSuccess;
 import com.attendance.fpt.services.WorkShiftService;
@@ -64,6 +65,55 @@ public class WorkShiftController {
         ));
     }
 
+    @GetMapping("/employee/attendance-leave")
+    @PreAuthorize("hasRole('ROLE_EMPLOYEE')")
+    public ResponseEntity<ResponseSuccess<List<WorkShiftResponse>>> getWorkShiftsByEmployeeByDateHaveAttendanceLeave(
+            @RequestParam LocalDate date) {
+        return ResponseEntity.ok(new ResponseSuccess<>(
+                HttpStatus.OK,
+                "Get work shifts by employee ID success",
+                workShiftService.getWorkShiftsByEmployeeByDate( date)
+        ));
+    }
+
+    @PutMapping("/update/{id}/status")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<ResponseSuccess<WorkShiftResponse>> updateStatus(@PathVariable("id") Long workShiftId) {
+        WorkShiftResponse response = workShiftService.updateStatus(workShiftId);
+        return ResponseEntity.ok(new ResponseSuccess<>(HttpStatus.CREATED,
+                "Update leave type success", response));
+    }
+
+
+    @GetMapping("/active")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<ResponseSuccess<List<WorkShiftResponse>>> getAllWorkShiftsActive() {
+        return ResponseEntity.ok(new ResponseSuccess<>(
+                HttpStatus.OK,
+                "Get all work shifts success",
+                workShiftService.getAllWorkShiftsActive()
+        ));
+    }
+
+    @GetMapping("/part-time/active")
+    @PreAuthorize("hasRole('ROLE_EMPLOYEE')")
+    public ResponseEntity<ResponseSuccess<List<WorkShiftResponse>>> getWorkShiftsPartTimeActive() {
+        return ResponseEntity.ok(new ResponseSuccess<>(
+                HttpStatus.OK,
+                "Get all work shifts part-time active success",
+                workShiftService.getAllWorkShiftsPartTimeActive()
+        ));
+    }
+
+    @GetMapping("/part-time/all")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<ResponseSuccess<List<WorkShiftResponse>>> getAllWorkShiftsPartTime() {
+        return ResponseEntity.ok(new ResponseSuccess<>(
+                HttpStatus.OK,
+                "Get all work shifts part-time success",
+                workShiftService.getAllWorkShiftsPartTime()
+        ));
+    }
 
 
 }

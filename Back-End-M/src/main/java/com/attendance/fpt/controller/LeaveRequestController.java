@@ -27,8 +27,7 @@ public class LeaveRequestController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam( required = false) String employeeName,
-            @RequestParam(required = false) LocalDate startDate,
-            @RequestParam(required = false) LocalDate endDate,
+            @RequestParam(required = false) LocalDate createDate,
             @RequestParam(required = false) Long departmentId,
             @RequestParam( required = false) Long workShiftId,
             @RequestParam( required = false) Long leaveTypeId,
@@ -38,7 +37,7 @@ public class LeaveRequestController {
                 HttpStatus.OK,
                 "Get all leave requests success",
                 leaveRequestService.getAllLeaveRequests(page, size, employeeName,
-                        startDate, endDate, departmentId, workShiftId, leaveTypeId, status)
+                        createDate, departmentId, workShiftId, leaveTypeId, status)
         ));
     }
 
@@ -111,4 +110,6 @@ public class LeaveRequestController {
                 null
         ));
     }
+
+
 }

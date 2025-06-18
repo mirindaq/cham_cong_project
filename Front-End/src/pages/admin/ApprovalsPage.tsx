@@ -72,13 +72,27 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/contexts/AuthContext";
 import Spinner from "@/components/Spinner";
+import {
+  RevertLeaveRequestStatus,
+  type RevertLeaveRequestResponse,
+} from "@/types/revertLeaveRequest.type";
+import { revertLeaveRequestApi } from "@/services/revertLeaveRequest.service";
+import {
+  PartTimeRequestStatus,
+  type PartTimeRequestResponse,
+} from "@/types/partTime.type";
+import { partTimeApi } from "@/services/partTime.service";
 
 export default function ApprovalsPage() {
   const [loading, setLoading] = useState<boolean>(false);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequestResponse[]>();
   const [complaints, setComplaints] = useState<ComplaintResponse[]>([]);
+  const [reverts, setReverts] = useState<RevertLeaveRequestResponse[]>([]);
+  const [partTimeRequests, setPartTimeRequests] = useState<
+    PartTimeRequestResponse[]
+  >([]);
+  const [partTimeSearchParams, setPartTimeSearchParams] = useSearchParams();
   const [departments, setDepartments] = useState<Department[]>();
   const [shifts, setShifts] = useState<WorkShift[]>();
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>();
@@ -89,6 +103,7 @@ export default function ApprovalsPage() {
   const [leaveRequestSearchParams, setLeaveRequestSearchParams] =
     useSearchParams();
   const [complaintSearchParams, setComplaintSearchParams] = useSearchParams();
+  const [revertSearchParams, setRevertSearchParams] = useSearchParams();
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<any>(null);
   const [showReasonForm, setShowReasonForm] = useState<
@@ -116,6 +131,24 @@ export default function ApprovalsPage() {
     endDate: format(new Date(), "dd/MM/yyyy"),
   });
 
+  const [filterReverts, setFilterReverts] = useState({
+    employeeName: "",
+    departmentId: "all",
+    workShiftId: null as number | null,
+    status: "all",
+    createdDate: format(new Date(), "dd/MM/yyyy"),
+    date: format(new Date(), "dd/MM/yyyy"),
+  });
+
+  const [filterPartTime, setFilterPartTime] = useState({
+    employeeName: "",
+    departmentId: "all",
+    workShiftId: null as number | null,
+    status: "all",
+    createdDate: format(new Date(), "dd/MM/yyyy"),
+    date: format(new Date(), "dd/MM/yyyy"),
+  });
+
   const [searchParams, setSearchParams] = useSearchParams();
   const [leaveRequestPage, setLeaveRequestPage] = useState(
     Number(searchParams.get("leavePage")) || 1
@@ -126,8 +159,24 @@ export default function ApprovalsPage() {
     Number(searchParams.get("complaintPage")) || 1
   );
   const [complaintTotalPage, setComplaintTotalPage] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-  const { user } = useAuth();
+  const [leaveRequestTotalItems, setLeaveRequestTotalItems] = useState(0);
+  const [complaintTotalItems, setComplaintTotalItems] = useState(0);
+
+  const [revertPage, setRevertPage] = useState(
+    Number(searchParams.get("revertPage")) || 1
+  );
+  const [revertTotalPage, setRevertTotalPage] = useState(1);
+  const [revertTotalItem, setRevertTotalItem] = useState(0);
+
+  const [partTimePage, setPartTimePage] = useState(
+    Number(searchParams.get("partTimePage")) || 1
+  );
+  const [partTimeTotalPage, setPartTimeTotalPage] = useState(1);
+  const [partTimeTotalItem, setPartTimeTotalItem] = useState(0);
+
+  const [typeDialog, setTypeDialog] = useState<
+    "leaveRequest" | "complaint" | "revert" | "partTime"
+  >("leaveRequest");
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -161,6 +210,10 @@ export default function ApprovalsPage() {
         await loadLeaveRequests();
       } else if (tab === "complaints") {
         await loadComplaints();
+      } else if (tab === "reverts") {
+        await loadReverts();
+      } else if (tab === "partTime") {
+        await loadPartTime();
       }
     };
 
@@ -171,6 +224,10 @@ export default function ApprovalsPage() {
     complaintPage,
     leaveRequestSearchParams,
     complaintSearchParams,
+    revertPage,
+    revertSearchParams,
+    partTimePage,
+    partTimeSearchParams,
   ]);
 
   useEffect(() => {
@@ -206,8 +263,42 @@ export default function ApprovalsPage() {
           complaintSearchParams.get("endDate") || filterComplaints.endDate,
       };
       setFilterComplaints((prev) => ({ ...prev, ...params }));
+    } else if (tab === "reverts") {
+      const params = {
+        employeeName: revertSearchParams.get("employeeName") || "",
+        departmentId: revertSearchParams.get("departmentId") || "all",
+        workShiftId: revertSearchParams.get("workShiftId")
+          ? Number(revertSearchParams.get("workShiftId"))
+          : null,
+        status: revertSearchParams.get("status")
+          ? revertSearchParams.get("status")!.toUpperCase()
+          : "all",
+        createdDate: revertSearchParams.get("createdDate") || "",
+        date: revertSearchParams.get("date") || "",
+      };
+      setFilterReverts((prev) => ({ ...prev, ...params }));
+    } else if (tab === "partTime") {
+      const params = {
+        employeeName: partTimeSearchParams.get("employeeName") || "",
+        departmentId: partTimeSearchParams.get("departmentId") || "all",
+        workShiftId: partTimeSearchParams.get("workShiftId")
+          ? Number(partTimeSearchParams.get("workShiftId"))
+          : null,
+        status: partTimeSearchParams.get("status")
+          ? partTimeSearchParams.get("status")!.toUpperCase()
+          : "all",
+        createdDate: partTimeSearchParams.get("createdDate") || "",
+        date: partTimeSearchParams.get("date") || "",
+      };
+      setFilterPartTime((prev) => ({ ...prev, ...params }));
     }
-  }, [tab, leaveRequestSearchParams, complaintSearchParams]);
+  }, [
+    tab,
+    leaveRequestSearchParams,
+    complaintSearchParams,
+    revertSearchParams,
+    partTimeSearchParams,
+  ]);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -223,7 +314,7 @@ export default function ApprovalsPage() {
       const response = await leaveRequestApi.getAllLeaveRequests(params);
       setLeaveRequests(response.data);
       setLeaveRequestTotalPage(response.totalPage);
-      setTotalItems(response.totalItem);
+      setLeaveRequestTotalItems(response.totalItem);
     } catch (error) {
       console.error(error);
       toast.error("Có lỗi xảy ra khi tải dữ liệu đơn nghỉ phép");
@@ -240,7 +331,7 @@ export default function ApprovalsPage() {
       const response = await complaintApi.getAllComplaints(params);
       setComplaints(response.data);
       setComplaintTotalPage(response.totalPage);
-      setTotalItems(response.totalItem);
+      setComplaintTotalItems(response.totalItem);
     } catch (error) {
       console.error(error);
       toast.error("Có lỗi xảy ra khi tải dữ liệu khiếu nại");
@@ -249,7 +340,51 @@ export default function ApprovalsPage() {
     }
   };
 
-  const getStatusBadge = (status: ComplaintStatus | LeaveRequestStatus) => {
+  const loadReverts = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams(revertSearchParams);
+      params.set("page", revertPage.toString());
+      const response = await revertLeaveRequestApi.getAllRevertLeaveRequests(
+        params
+      );
+      console.log(response);
+      setReverts(response.data.data);
+      setRevertTotalPage(response.data.totalPage);
+      setRevertTotalItem(response.data.totalItem);
+    } catch (error) {
+      console.error(error);
+      toast.error("Có lỗi xảy ra khi tải dữ liệu đơn xin đi làm lại");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadPartTime = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams(partTimeSearchParams);
+      params.set("page", partTimePage.toString());
+      const response = await partTimeApi.getAllPartTimeRequests(params);
+
+      setPartTimeRequests(response.data);
+      setPartTimeTotalPage(response.totalPage);
+      setPartTimeTotalItem(response.totalItem);
+    } catch (error) {
+      console.error(error);
+      toast.error("Có lỗi xảy ra khi tải dữ liệu đăng ký part-time");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusBadge = (
+    status:
+      | ComplaintStatus
+      | LeaveRequestStatus
+      | RevertLeaveRequestStatus
+      | PartTimeRequestStatus
+  ) => {
     switch (status) {
       case LeaveRequestStatus.APPROVED:
         return <Badge className="bg-green-600 text-white">Đã duyệt</Badge>;
@@ -270,12 +405,17 @@ export default function ApprovalsPage() {
             Đã thu hồi
           </Badge>
         );
-      default:
-        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
-  const getStatusLabel = (status: LeaveRequestStatus | ComplaintStatus) => {
+  const getStatusLabel = (
+    status:
+      | LeaveRequestStatus
+      | ComplaintStatus
+      | RevertLeaveRequestStatus
+      | PartTimeRequestStatus
+      | string
+  ) => {
     switch (status) {
       case LeaveRequestStatus.PENDING:
         return "Đang xử lý";
@@ -360,6 +500,62 @@ export default function ApprovalsPage() {
     setComplaintPage(1);
   };
 
+  const handleFilterReverts = () => {
+    const newParams = new URLSearchParams();
+    newParams.set("tab", "reverts");
+
+    if (filterReverts.employeeName)
+      newParams.set("employeeName", filterReverts.employeeName);
+
+    if (filterReverts.departmentId !== "all")
+      newParams.set("departmentId", filterReverts.departmentId);
+
+    if (
+      filterReverts.workShiftId !== null &&
+      filterReverts.workShiftId !== undefined
+    )
+      newParams.set("workShiftId", filterReverts.workShiftId.toString());
+
+    if (filterReverts.status !== "all")
+      newParams.set("status", filterReverts.status);
+
+    if (filterReverts.createdDate)
+      newParams.set("createdDate", filterReverts.createdDate);
+
+    if (filterReverts.date) newParams.set("date", filterReverts.date);
+
+    setRevertSearchParams(newParams);
+    setRevertPage(1);
+  };
+
+  const handleFilterPartTime = () => {
+    const newParams = new URLSearchParams();
+    newParams.set("tab", "partTime");
+
+    if (filterPartTime.employeeName)
+      newParams.set("employeeName", filterPartTime.employeeName);
+
+    if (filterPartTime.departmentId !== "all")
+      newParams.set("departmentId", filterPartTime.departmentId);
+
+    if (
+      filterPartTime.workShiftId !== null &&
+      filterPartTime.workShiftId !== undefined
+    )
+      newParams.set("workShiftId", filterPartTime.workShiftId.toString());
+
+    if (filterPartTime.status !== "all")
+      newParams.set("status", filterPartTime.status);
+
+    if (filterPartTime.createdDate)
+      newParams.set("createdDate", filterPartTime.createdDate);
+
+    if (filterPartTime.date) newParams.set("date", filterPartTime.date);
+
+    setPartTimeSearchParams(newParams);
+    setPartTimePage(1);
+  };
+
   const handleLeaveRequestPageChange = (page: number) => {
     setLeaveRequestPage(page);
     const params = new URLSearchParams(searchParams);
@@ -374,17 +570,32 @@ export default function ApprovalsPage() {
     setSearchParams(params);
   };
 
+  const handleRevertPageChange = (page: number) => {
+    setRevertPage(page);
+    const params = new URLSearchParams(searchParams);
+    params.set("revertPage", page.toString());
+    setSearchParams(params);
+  };
+
+  const handlePartTimePageChange = (page: number) => {
+    setPartTimePage(page);
+    const params = new URLSearchParams(searchParams);
+    params.set("partTimePage", page.toString());
+    setSearchParams(params);
+  };
+
   const handleApproveLeaveRequest = async (
     id: number,
     responseNote: string
   ) => {
-    if (!user?.id) {
-      toast.error("Vui lòng đăng nhập lại để tiếp tục thao tác");
-      return;
-    }
     try {
-      await leaveRequestApi.approveLeaveRequest(id, responseNote);
-      toast.success("Phê duyệt đơn nghỉ phép thành công");
+      const response = await leaveRequestApi.approveLeaveRequest(
+        id,
+        responseNote
+      );
+      if (response.status === 200) {
+        toast.success("Phê duyệt đơn nghỉ phép thành công");
+      }
       setShowDetailModal(false);
       setReasonText("");
       setShowReasonForm(null);
@@ -393,18 +604,19 @@ export default function ApprovalsPage() {
         await loadLeaveRequests();
       }
     } catch (error) {
-
+      toast.error("Có lỗi xảy ra khi phê duyệt đơn nghỉ phép");
     }
   };
 
   const handleRejectLeaveRequest = async (id: number, responseNote: string) => {
     try {
-      if (!user || !user.id) {
-        toast.error("Vui lòng đăng nhập lại để tiếp tục thao tác");
-        return;
+      const response = await leaveRequestApi.rejectLeaveRequest(
+        id,
+        responseNote
+      );
+      if (response.status === 200) {
+        toast.success("Từ chối đơn nghỉ phép thành công");
       }
-      await leaveRequestApi.rejectLeaveRequest(id, responseNote);
-      toast.success("Từ chối đơn nghỉ phép thành công");
       setShowDetailModal(false);
       setReasonText("");
       setShowReasonForm(null);
@@ -412,18 +624,16 @@ export default function ApprovalsPage() {
         await loadLeaveRequests();
       }
     } catch (error) {
-
+      toast.error("Có lỗi xảy ra khi từ chối đơn nghỉ phép");
     }
   };
 
   const handleApproveComplaint = async (id: number, responseNote: string) => {
-    if (!user || !user.id) {
-      toast.error("Vui lòng đăng nhập lại để tiếp tục thao tác");
-      return;
-    }
     try {
-      await complaintApi.approveComplaint(id, responseNote);
-      toast.success("Phê duyệt đơn khiếu nại thành công");
+      const response = await complaintApi.approveComplaint(id, responseNote);
+      if (response.status === 200) {
+        toast.success("Phê duyệt đơn khiếu nại thành công");
+      }
       setShowDetailModal(false);
       setReasonText("");
       setShowReasonForm(null);
@@ -431,18 +641,16 @@ export default function ApprovalsPage() {
         await loadComplaints();
       }
     } catch (error) {
-
+      toast.error("Có lỗi xảy ra khi phê duyệt đơn khiếu nại");
     }
   };
 
   const handleRejectComplaint = async (id: number, responseNote: string) => {
     try {
-      if (!user || !user.id) {
-        toast.error("Vui lòng đăng nhập lại để tiếp tục thao tác");
-        return;
+      const response = await complaintApi.rejectComplaint(id, responseNote);
+      if (response.status === 200) {
+        toast.success("Từ chối đơn khiếu nại thành công");
       }
-      await complaintApi.rejectComplaint(id, responseNote);
-      toast.success("Từ chối đơn khiếu nại thành công");
       setShowDetailModal(false);
       setReasonText("");
       setShowReasonForm(null);
@@ -451,7 +659,91 @@ export default function ApprovalsPage() {
         await loadComplaints();
       }
     } catch (error) {
+      toast.error("Có lỗi xảy ra khi từ chối đơn khiếu nại");
+    }
+  };
 
+  const handleApproveRevert = async (id: number, responseNote: string) => {
+    try {
+      const response = await revertLeaveRequestApi.approveRevertLeaveRequest(
+        id,
+        responseNote
+      );
+      if (response.status === 200) {
+        toast.success("Phê duyệt đơn xin đi làm lại thành công");
+      }
+      setShowDetailModal(false);
+      setReasonText("");
+      setShowReasonForm(null);
+      // Reload data
+      if (tab === "reverts") {
+        await loadReverts();
+      }
+    } catch (error) {
+      toast.error("Có lỗi xảy ra khi phê duyệt đơn xin đi làm lại");
+    }
+  };
+
+  const handleRejectRevert = async (id: number, responseNote: string) => {
+    try {
+      const response = await revertLeaveRequestApi.rejectRevertLeaveRequest(
+        id,
+        responseNote
+      );
+      if (response.status === 200) {
+        toast.success("Từ chối đơn xin đi làm lại thành công");
+      }
+      setShowDetailModal(false);
+      setReasonText("");
+      setShowReasonForm(null);
+      // Reload data
+      if (tab === "reverts") {
+        await loadReverts();
+      }
+    } catch (error) {
+      toast.error("Có lỗi xảy ra khi từ chối đơn xin đi làm lại");
+    }
+  };
+
+  const handleApprovePartTime = async (id: number, responseNote: string) => {
+    try {
+      const response = await partTimeApi.approvePartTimeRequest(
+        id,
+        responseNote
+      );
+      if (response.status === 200) {
+        toast.success("Phê duyệt đơn đăng ký part-time thành công");
+      }
+      setShowDetailModal(false);
+      setReasonText("");
+      setShowReasonForm(null);
+      // Reload data
+      if (tab === "partTime") {
+        await loadPartTime();
+      }
+    } catch (error) {
+      toast.error("Có lỗi xảy ra khi phê duyệt đơn đăng ký part-time");
+    }
+  };
+
+  const handleRejectPartTime = async (id: number, responseNote: string) => {
+    try {
+      const response = await partTimeApi.rejectPartTimeRequest(
+        id,
+        responseNote
+      );
+      if (response.status === 200) {
+        toast.success("Từ chối đơn đăng ký part-time thành công");
+      }
+      setShowDetailModal(false);
+      setReasonText("");
+      setShowReasonForm(null);
+      // Reload data
+      if (tab === "partTime") {
+        await loadPartTime();
+      }
+    } catch (error) {
+      toast.error("Có lỗi xảy ra khi từ chối đơn đăng ký part-time");
     }
   };
 
@@ -465,7 +757,8 @@ export default function ApprovalsPage() {
         <CardHeader>
           <CardTitle>Phê duyệt yêu cầu</CardTitle>
           <CardDescription>
-            Phê duyệt các yêu cầu nghỉ phép và khiếu nại chấm công
+            Phê duyệt các yêu cầu nghỉ phép, khiếu nại chấm công, đơn xin đi làm
+            lại, đơn đăng ký part time
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -473,6 +766,8 @@ export default function ApprovalsPage() {
             <TabsList>
               <TabsTrigger value="leaveRequests">Đơn nghỉ phép</TabsTrigger>
               <TabsTrigger value="complaints">Khiếu nại chấm công</TabsTrigger>
+              <TabsTrigger value="reverts">Đơn xin đi làm lại</TabsTrigger>
+              <TabsTrigger value="partTime">Đơn đăng ký parttime</TabsTrigger>
             </TabsList>
 
             <TabsContent value="leaveRequests" className="space-y-4">
@@ -720,75 +1015,76 @@ export default function ApprovalsPage() {
                             </TableRow>
                           );
                         } else {
-                          tableContent = leaveRequests?.map((request) => (
-                            <TableRow key={request.id}>
-                              <TableCell className="p-2 text-left font-medium">
-                                {leaveRequests.findIndex(
-                                  (req) => req.id === request.id
-                                ) + 1}
-                              </TableCell>
-                              <TableCell className="p-2 text-left font-medium">
-                                {request.employeeName}
-                              </TableCell>
-                              <TableCell className="p-2 text-left font-medium">
-                                {request.departmentName}
-                              </TableCell>
-                              <TableCell className="p-2 text-left font-medium">
-                                {request.leaveType.name}
-                              </TableCell>
-                              <TableCell className="p-2 text-left font-medium">
-                                {request.createdAt
-                                  ? format(
-                                      parseISO(request.createdAt),
-                                      "dd/MM/yyyy HH:mm:ss"
-                                    )
-                                  : "N/A"}
-                              </TableCell>
-                              <TableCell className="p-2 text-left font-medium">
-                                {request.startDate
-                                  ? format(
-                                      parseISO(request.startDate),
-                                      "dd/MM/yyyy"
-                                    )
-                                  : "N/A"}
-                              </TableCell>
-                              <TableCell className="p-2 text-left font-medium">
-                                {request.endDate
-                                  ? format(
-                                      parseISO(request.endDate),
-                                      "dd/MM/yyyy"
-                                    )
-                                  : "N/A"}
-                              </TableCell>
-                              <TableCell className="p-2 text-left font-medium">
-                                {request.reason}
-                              </TableCell>
-                              <TableCell className="p-3">
-                                {getStatusBadge(
-                                  request.status as LeaveRequestStatus
-                                )}
-                              </TableCell>
-                              <TableCell className="p-2 text-left font-medium">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button size="icon" variant="ghost">
-                                      <MoreHorizontal />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent>
-                                    <DropdownMenuItem
-                                      onClick={() => {
-                                        setSelectedDetail(request);
-                                        setShowDetailModal(true);
-                                      }}
-                                    >
-                                      Xem chi tiết
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </TableCell>
-                            </TableRow>
-                          ));
+                          tableContent = leaveRequests?.map(
+                            (request, index) => (
+                              <TableRow key={request.id}>
+                                <TableCell className="p-2 text-left font-medium">
+                                  {(leaveRequestPage - 1) * 10 + index + 1}
+                                </TableCell>
+                                <TableCell className="p-2 text-left font-medium">
+                                  {request.employeeName}
+                                </TableCell>
+                                <TableCell className="p-2 text-left font-medium">
+                                  {request.departmentName}
+                                </TableCell>
+                                <TableCell className="p-2 text-left font-medium">
+                                  {request.leaveType.name}
+                                </TableCell>
+                                <TableCell className="p-2 text-left font-medium">
+                                  {request.createdAt
+                                    ? format(
+                                        parseISO(request.createdAt),
+                                        "dd/MM/yyyy HH:mm:ss"
+                                      )
+                                    : "N/A"}
+                                </TableCell>
+                                <TableCell className="p-2 text-left font-medium">
+                                  {request.startDate
+                                    ? format(
+                                        parseISO(request.startDate),
+                                        "dd/MM/yyyy"
+                                      )
+                                    : "N/A"}
+                                </TableCell>
+                                <TableCell className="p-2 text-left font-medium">
+                                  {request.endDate
+                                    ? format(
+                                        parseISO(request.endDate),
+                                        "dd/MM/yyyy"
+                                      )
+                                    : "N/A"}
+                                </TableCell>
+                                <TableCell className="p-2 text-left font-medium">
+                                  {request.reason}
+                                </TableCell>
+                                <TableCell className="p-3">
+                                  {getStatusBadge(
+                                    request.status as LeaveRequestStatus
+                                  )}
+                                </TableCell>
+                                <TableCell className="p-2 text-left font-medium">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button size="icon" variant="ghost">
+                                        <MoreHorizontal />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          setSelectedDetail(request);
+                                          setShowDetailModal(true);
+                                          setTypeDialog("leaveRequest");
+                                        }}
+                                      >
+                                        Xem chi tiết
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          );
                         }
                         return tableContent;
                       })()}
@@ -799,6 +1095,11 @@ export default function ApprovalsPage() {
                     totalPage={leaveRequestTotalPage}
                     onPageChange={handleLeaveRequestPageChange}
                   />
+                  <CardFooter className="flex justify-between">
+                    <div className="text-sm text-muted-foreground">
+                      Tổng số: {leaveRequestTotalItems} bản ghi
+                    </div>
+                  </CardFooter>
                 </div>
               </>
             </TabsContent>
@@ -989,15 +1290,13 @@ export default function ApprovalsPage() {
                             </TableRow>
                           );
                         } else {
-                          tableContent = complaints.map((complaint) => (
+                          tableContent = complaints.map((complaint, index) => (
                             <TableRow key={complaint.id}>
                               <TableCell className="p-2">
-                                {complaints.findIndex(
-                                  (c) => c.id === complaint.id
-                                ) + 1}
+                                {(complaintPage - 1) * 10 + index + 1}
                               </TableCell>
                               <TableCell className="p-2">
-                                {complaint.employeeFullName}
+                                {complaint.employeeName}
                               </TableCell>
                               <TableCell className="p-2">
                                 {complaint.departmentName}
@@ -1041,6 +1340,7 @@ export default function ApprovalsPage() {
                                       onClick={() => {
                                         setSelectedDetail(complaint);
                                         setShowDetailModal(true);
+                                        setTypeDialog("complaint");
                                       }}
                                     >
                                       Xem chi tiết
@@ -1060,16 +1360,544 @@ export default function ApprovalsPage() {
                     totalPage={complaintTotalPage}
                     onPageChange={handleComplaintPageChange}
                   />
+                  <CardFooter className="flex justify-between">
+                    <div className="text-sm text-muted-foreground">
+                      Tổng số: {complaintTotalItems} bản ghi
+                    </div>
+                  </CardFooter>
+                </div>
+              </>
+            </TabsContent>
+
+            <TabsContent value="reverts" className="space-y-4">
+              <>
+                <div className="bg-muted/50 py-2 rounded-lg mb-6 px-2">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <Label className="text-sm font-medium">Nhân viên</Label>
+                      <Input
+                        placeholder="Tìm theo tên..."
+                        className="w-full sm:w-[220px]"
+                        value={filterReverts.employeeName}
+                        onChange={(e) =>
+                          setFilterReverts((prev) => ({
+                            ...prev,
+                            employeeName: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium">Ngày tạo</Label>
+                      <Input
+                        type="date"
+                        value={filterReverts.createdDate}
+                        onChange={(e) =>
+                          setFilterReverts((prev) => ({
+                            ...prev,
+                            createdDate: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium">
+                        Ngày làm việc
+                      </Label>
+                      <Input
+                        type="date"
+                        value={filterReverts.date}
+                        onChange={(e) =>
+                          setFilterReverts((prev) => ({
+                            ...prev,
+                            date: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium">Phòng ban</Label>
+                      <Select
+                        value={filterReverts.departmentId}
+                        onValueChange={(value) =>
+                          setFilterReverts((prev) => ({
+                            ...prev,
+                            departmentId: value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-[160px]">
+                          <SelectValue placeholder="Tất cả phòng ban" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tất cả phòng ban</SelectItem>
+                          {departments?.map((dept) => (
+                            <SelectItem
+                              key={dept.id}
+                              value={dept.id.toString()}
+                            >
+                              {dept.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium">Ca làm</Label>
+                      <Select
+                        value={
+                          filterReverts.workShiftId !== null
+                            ? filterReverts.workShiftId.toString()
+                            : "all"
+                        }
+                        onValueChange={(value) =>
+                          setFilterReverts((prev) => ({
+                            ...prev,
+                            workShiftId: value === "all" ? null : Number(value),
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue placeholder="Tất cả ca" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tất cả ca</SelectItem>
+                          {shifts?.map((shift) => (
+                            <SelectItem
+                              key={shift.id}
+                              value={shift.id.toString()}
+                            >
+                              {shift.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium">Trạng thái</Label>
+                      <Select
+                        value={filterReverts.status}
+                        onValueChange={(value) =>
+                          setFilterReverts((prev) => ({
+                            ...prev,
+                            status: value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Lọc theo trạng thái" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                          {Object.values(RevertLeaveRequestStatus).map(
+                            (status) => (
+                              <SelectItem key={status} value={status}>
+                                {getStatusLabel(status)}
+                              </SelectItem>
+                            )
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-end mt-5">
+                      <Button
+                        className="w-full sm:w-auto hover:cursor-pointer"
+                        onClick={() => handleFilterReverts()}
+                      >
+                        Lọc
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b bg-muted/50">
+                        <TableHead className="p-2 text-left font-medium">
+                          STT
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Nhân viên
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Bộ phận
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Ngày làm việc
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Ngày tạo
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Ca làm
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Lý Do
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Trạng thái
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Hành động
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {reverts.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={10}
+                            className="p-4 text-center text-muted-foreground"
+                          >
+                            Không có đơn xin nghỉ phép nào đang chờ duyệt
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        reverts.map((revert, index) => (
+                          <TableRow key={revert.id}>
+                            <TableCell className="p-2 text-left font-medium">
+                              {(revertPage - 1) * 10 + index + 1}
+                            </TableCell>
+                            <TableCell className="p-2 text-left font-medium">
+                              {revert.employeeName}
+                            </TableCell>
+                            <TableCell className="p-2 text-left font-medium">
+                              {revert.departmentName}
+                            </TableCell>
+
+                            <TableCell className="p-2 text-left font-medium">
+                              {revert.date
+                                ? format(parseISO(revert.date), "dd/MM/yyyy")
+                                : "N/A"}
+                            </TableCell>
+                            <TableCell className="p-2 text-left font-medium">
+                              {revert.createdAt
+                                ? format(
+                                    parseISO(revert.createdAt),
+                                    "dd/MM/yyyy HH:mm:ss"
+                                  )
+                                : "N/A"}
+                            </TableCell>
+
+                            <TableCell className="p-2 text-left font-medium">
+                              {revert.workShift.name}
+                            </TableCell>
+
+                            <TableCell className="p-2 text-left font-medium">
+                              {revert.reason}
+                            </TableCell>
+                            <TableCell className="p-3">
+                              {getStatusBadge(
+                                revert.status as RevertLeaveRequestStatus
+                              )}
+                            </TableCell>
+                            <TableCell className="p-2 text-left font-medium">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button size="icon" variant="ghost">
+                                    <MoreHorizontal />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedDetail(revert);
+                                      setShowDetailModal(true);
+                                      setTypeDialog("revert");
+                                    }}
+                                  >
+                                    Xem chi tiết
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                  <PaginationComponent
+                    currentPage={revertPage}
+                    totalPage={revertTotalPage}
+                    onPageChange={handleRevertPageChange}
+                  />
+                  <CardFooter className="flex justify-between">
+                    <div className="text-sm text-muted-foreground">
+                      Tổng số: {revertTotalItem} bản ghi
+                    </div>
+                  </CardFooter>
+                </div>
+              </>
+            </TabsContent>
+
+            <TabsContent value="partTime" className="space-y-4">
+              <>
+                <div className="bg-muted/50 py-2 rounded-lg mb-6 px-2">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <Label className="text-sm font-medium">Nhân viên</Label>
+                      <Input
+                        placeholder="Tìm theo tên..."
+                        className="w-full sm:w-[220px]"
+                        value={filterPartTime.employeeName}
+                        onChange={(e) =>
+                          setFilterPartTime((prev) => ({
+                            ...prev,
+                            employeeName: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium">Ngày tạo</Label>
+                      <Input
+                        type="date"
+                        value={filterPartTime.createdDate}
+                        onChange={(e) =>
+                          setFilterPartTime((prev) => ({
+                            ...prev,
+                            createdDate: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium">
+                        Ngày làm việc
+                      </Label>
+                      <Input
+                        type="date"
+                        value={filterPartTime.date}
+                        onChange={(e) =>
+                          setFilterPartTime((prev) => ({
+                            ...prev,
+                            date: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium">Phòng ban</Label>
+                      <Select
+                        value={filterPartTime.departmentId}
+                        onValueChange={(value) =>
+                          setFilterPartTime((prev) => ({
+                            ...prev,
+                            departmentId: value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-[160px]">
+                          <SelectValue placeholder="Tất cả phòng ban" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tất cả phòng ban</SelectItem>
+                          {departments?.map((dept) => (
+                            <SelectItem
+                              key={dept.id}
+                              value={dept.id.toString()}
+                            >
+                              {dept.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium">Ca làm</Label>
+                      <Select
+                        value={
+                          filterPartTime.workShiftId !== null
+                            ? filterPartTime.workShiftId.toString()
+                            : "all"
+                        }
+                        onValueChange={(value) =>
+                          setFilterPartTime((prev) => ({
+                            ...prev,
+                            workShiftId: value === "all" ? null : Number(value),
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue placeholder="Tất cả ca" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tất cả ca</SelectItem>
+                          {shifts?.map((shift) => (
+                            <SelectItem
+                              key={shift.id}
+                              value={shift.id.toString()}
+                            >
+                              {shift.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium">Trạng thái</Label>
+                      <Select
+                        value={filterPartTime.status}
+                        onValueChange={(value) =>
+                          setFilterPartTime((prev) => ({
+                            ...prev,
+                            status: value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Lọc theo trạng thái" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                          {Object.values(PartTimeRequestStatus).map(
+                            (status) => (
+                              <SelectItem key={status} value={status}>
+                                {getStatusLabel(status)}
+                              </SelectItem>
+                            )
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-end mt-5">
+                      <Button
+                        className="w-full sm:w-auto hover:cursor-pointer"
+                        onClick={() => handleFilterPartTime()}
+                      >
+                        Lọc
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b bg-muted/50">
+                        <TableHead className="p-2 text-left font-medium">
+                          STT
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Nhân viên
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Bộ phận
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Ngày làm việc
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Ca làm việc
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Ngày tạo
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Trạng thái
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Hành động
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {partTimeRequests.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={9}
+                            className="p-4 text-center text-muted-foreground"
+                          >
+                            Không có đơn đăng ký part-time nào đang chờ duyệt
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        partTimeRequests.map((request, index) => (
+                          <TableRow key={request.id}>
+                            <TableCell className="p-2 text-left font-medium">
+                              {(partTimePage - 1) * 10 + index + 1}
+                            </TableCell>
+                            <TableCell className="p-2 text-left font-medium">
+                              {request.employeeName}
+                            </TableCell>
+                            <TableCell className="p-2 text-left font-medium">
+                              {request.departmentName}
+                            </TableCell>
+                            <TableCell className="p-2 text-left font-medium">
+                              {request.date
+                                ? format(parseISO(request.date), "dd/MM/yyyy")
+                                : "N/A"}
+                            </TableCell>
+                            <TableCell className="p-2 text-left font-medium">
+                              {request.workShift.name} (
+                              {request.workShift.startTime} -{" "}
+                              {request.workShift.endTime})
+                            </TableCell>
+                            <TableCell className="p-2 text-left font-medium">
+                              {request.createdAt
+                                ? format(
+                                    parseISO(request.createdAt),
+                                    "dd/MM/yyyy HH:mm:ss"
+                                  )
+                                : "N/A"}
+                            </TableCell>
+
+                            <TableCell className="p-3">
+                              {getStatusBadge(request.status)}
+                            </TableCell>
+                            <TableCell className="p-2 text-left font-medium">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button size="icon" variant="ghost">
+                                    <MoreHorizontal />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedDetail(request);
+                                      setShowDetailModal(true);
+                                      setTypeDialog("partTime");
+                                    }}
+                                  >
+                                    Xem chi tiết
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                  <PaginationComponent
+                    currentPage={partTimePage}
+                    totalPage={partTimeTotalPage}
+                    onPageChange={handlePartTimePageChange}
+                  />
+                  <CardFooter className="flex justify-between">
+                    <div className="text-sm text-muted-foreground">
+                      Tổng số: {partTimeTotalItem} bản ghi
+                    </div>
+                  </CardFooter>
                 </div>
               </>
             </TabsContent>
           </Tabs>
         </CardContent>
-        <CardFooter className="flex justify-between">
-          <div className="text-sm text-muted-foreground">
-            Tổng số: {totalItems} bản ghi
-          </div>
-        </CardFooter>
       </Card>
 
       <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
@@ -1080,9 +1908,13 @@ export default function ApprovalsPage() {
                 <DialogTitle className="flex items-center gap-2">
                   <FileText className="w-5 h-5" />
                   <span>
-                    {selectedDetail?.leaveType
+                    {typeDialog === "leaveRequest"
                       ? "Chi tiết phiếu nghỉ phép"
-                      : "Chi tiết phiếu khiếu nại"}
+                      : typeDialog === "complaint"
+                      ? "Chi tiết phiếu khiếu nại"
+                      : typeDialog === "revert"
+                      ? "Chi tiết phiếu xin đi làm lại"
+                      : "Chi tiết phiếu đăng ký part-time"}
                   </span>
                 </DialogTitle>
                 {getStatusBadge(selectedDetail?.status)}
@@ -1113,16 +1945,34 @@ export default function ApprovalsPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      Loại nghỉ phép:
-                    </span>
-                    <span className="text-sm font-medium">
-                      {selectedDetail.leaveType?.name ||
-                        selectedDetail.complaintType}
-                    </span>
-                  </div>
+                  {typeDialog !== "revert" && typeDialog !== "partTime" && (
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        {typeDialog === "leaveRequest"
+                          ? "Loại nghỉ phép:"
+                          : "Loại khiếu nại:"}
+                      </span>
+                      <span className="text-sm font-medium">
+                        {selectedDetail.leaveType?.name ||
+                          selectedDetail.complaintType}
+                      </span>
+                    </div>
+                  )}
+                  {typeDialog === "revert" ||
+                    (typeDialog === "partTime" && (
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          Ca làm:
+                        </span>
+                        <span className="text-sm font-medium">
+                          {selectedDetail.workShift.name} (
+                          {selectedDetail.workShift.startTime} -{" "}
+                          {selectedDetail.workShift.endTime})
+                        </span>
+                      </div>
+                    ))}
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
@@ -1139,7 +1989,7 @@ export default function ApprovalsPage() {
                   </div>
                 </div>
 
-                {selectedDetail.leaveType ? (
+                {typeDialog === "leaveRequest" && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -1170,11 +2020,17 @@ export default function ApprovalsPage() {
                       </span>
                     </div>
                   </div>
-                ) : (
+                )}
+
+                {typeDialog !== "leaveRequest" && (
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
-                      Ngày khiếu nại:
+                      {typeDialog === "complaint"
+                        ? "Ngày cần khiếu nại:"
+                        : typeDialog === "revert"
+                        ? "Ngày đi làm lại:"
+                        : "Ngày làm việc:"}
                     </span>
                     <span className="text-sm font-medium">
                       {selectedDetail.date
@@ -1185,17 +2041,25 @@ export default function ApprovalsPage() {
                 )}
 
                 {/* Lý do */}
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <AlertCircle className="w-4 h-4" />
-                    <span className="text-sm text-muted-foreground font-medium">
-                      Lý do xin nghỉ:
-                    </span>
+                {typeDialog !== "partTime" && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <AlertCircle className="w-4 h-4" />
+                      <span className="text-sm text-muted-foreground font-medium">
+                        {typeDialog === "leaveRequest"
+                          ? "Lý do nghỉ phép:"
+                          : typeDialog === "complaint"
+                          ? "Lý do khiếu nại:"
+                          : typeDialog === "revert"
+                          ? "Lý do đi làm lại:"
+                          : "Ghi chú:"}
+                      </span>
+                    </div>
+                    <div className="bg-gray-50 border rounded p-3 text-sm text-gray-700 whitespace-pre-line">
+                      {selectedDetail.reason || selectedDetail.notes}
+                    </div>
                   </div>
-                  <div className="bg-gray-50 border rounded p-3 text-sm text-gray-700 whitespace-pre-line">
-                    {selectedDetail.reason}
-                  </div>
-                </div>
+                )}
 
                 {/* Thông tin phản hồi */}
                 {(selectedDetail.status === "APPROVED" ||
@@ -1282,16 +2146,26 @@ export default function ApprovalsPage() {
                       <Button
                         variant="default"
                         onClick={() => {
-                          if (selectedDetail?.leaveType) {
+                          if (typeDialog === "leaveRequest") {
                             handleApproveLeaveRequest(
                               selectedDetail.id,
                               reasonText
                             );
-                          } else {
+                          } else if (typeDialog === "complaint") {
                             handleApproveComplaint(
                               selectedDetail.id,
                               reasonText
                             );
+                          } else if (typeDialog === "revert") {
+                            handleApproveRevert(selectedDetail.id, reasonText);
+                          } else if (typeDialog === "partTime") {
+                            handleApprovePartTime(
+                              selectedDetail.id,
+                              reasonText
+                            );
+                            setShowDetailModal(false);
+                            setReasonText("");
+                            setShowReasonForm(null);
                           }
                         }}
                       >
@@ -1301,16 +2175,23 @@ export default function ApprovalsPage() {
                       <Button
                         variant="destructive"
                         onClick={() => {
-                          if (selectedDetail?.leaveType) {
+                          if (typeDialog === "leaveRequest") {
                             handleRejectLeaveRequest(
                               selectedDetail.id,
                               reasonText
                             );
-                          } else {
+                          } else if (typeDialog === "complaint") {
                             handleRejectComplaint(
                               selectedDetail.id,
                               reasonText
                             );
+                          } else if (typeDialog === "revert") {
+                            handleRejectRevert(selectedDetail.id, reasonText);
+                          } else if (typeDialog === "partTime") {
+                            handleRejectPartTime(selectedDetail.id, reasonText);
+                            setShowDetailModal(false);
+                            setReasonText("");
+                            setShowReasonForm(null);
                           }
                         }}
                       >

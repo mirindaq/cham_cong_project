@@ -26,19 +26,15 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
 
 
     @Query("SELECT DISTINCT lq FROM LeaveRequest lq " +
-            "JOIN lq.employee e " +
-            "LEFT JOIN WorkShiftAssignment wfa ON wfa.employee.id = e.id " +
-            "WHERE (:employeeName IS NULL OR LOWER(e.fullName) LIKE LOWER(CONCAT('%', :employeeName, '%'))) " +
-            "AND (:startDateTime IS NULL OR lq.createdAt >= :startDateTime) " +
-            "AND (:endDateTime IS NULL OR lq.createdAt <= :endDateTime) " +
-            "AND (:departmentId IS NULL OR e.department.id = :departmentId) " +
-            "AND (:workShiftId IS NULL OR wfa.workShift.id = :workShiftId) " +
+            "WHERE (:employeeName IS NULL OR LOWER(lq.employee.fullName) LIKE LOWER(CONCAT('%', :employeeName, '%'))) " +
+            "AND (:createdDate IS NULL OR FUNCTION('DATE', lq.createdAt) = :createdDate) " +
+            "AND (:departmentId IS NULL OR lq.employee.department.id = :departmentId) " +
+            "AND (:workShiftId IS NULL OR lq.workShift.id = :workShiftId) " +
             "AND (:leaveTypeId IS NULL OR lq.leaveType.id = :leaveTypeId) " +
             "AND (:status IS NULL OR lq.status = :status)")
     Page<LeaveRequest> findAllWithFilters(
             @Param("employeeName") String employeeName,
-            @Param("startDateTime") LocalDateTime startDateTime,
-            @Param("endDateTime") LocalDateTime endDateTime,
+            @Param("createdDate") LocalDate createdDate,
             @Param("departmentId") Long departmentId,
             @Param("workShiftId") Long workShiftId,
             @Param("leaveTypeId") Long leaveTypeId,

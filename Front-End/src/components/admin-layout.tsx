@@ -23,6 +23,14 @@ import {
   CheckCircle,
   ClipboardCheck,
   User,
+  Building2,
+  CalendarClock,
+  AlertCircle,
+  Calendar,
+  Clock,
+  RotateCcw,
+  CalendarDays,
+  ClipboardList,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -44,20 +52,36 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const navigation: NavigationItem[] = [
     { name: "Tổng quan", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Nhân viên", href: "/admin/users", icon: Users },
-    { name: "Phòng ban", href: "/admin/departments", icon: Users },
+    { name: "Phòng ban", href: "/admin/departments", icon: Building2 },
     {
       name: "Phân công ca làm việc",
       href: "/admin/shiff-assignment",
-      icon: Users,
+      icon: CalendarClock,
     },
     { name: "Vị trí", href: "/admin/locations", icon: MapPin },
-    { name: "Phê duyệt", href: "/admin/approvals", icon: ClipboardCheck },
+    // { name: "Phê duyệt", href: "/admin/approvals", icon: ClipboardList },
+    {
+      name: "Đơn khiếu nại chấm công",
+      href: "/admin/complaint-approvals",
+      icon: AlertCircle,
+    },
+    { name: "Đơn nghỉ phép", href: "/admin/leave-approvals", icon: Calendar },
+    {
+      name: "Đơn đăng ký parttime",
+      href: "/admin/part-time-approvals",
+      icon: Clock,
+    },
+    {
+      name: "Đơn xin đi làm lại",
+      href: "/admin/revert-leave-approvals",
+      icon: RotateCcw,
+    },
     {
       name: "Quản lý số ngày nghỉ phép",
       href: "/admin/leave-balance",
-      icon: Users,
+      icon: CalendarDays,
     },
-    { name: "Chấm công", href: "/admin/attendances", icon: Users },
+    { name: "Chấm công", href: "/admin/attendances", icon: ClipboardCheck },
     { name: "Báo cáo", href: "/admin/reports", icon: FileText },
     { name: "Hồ sơ cá nhân", href: "/admin/profile", icon: User },
   ];

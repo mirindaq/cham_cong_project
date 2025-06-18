@@ -20,7 +20,10 @@ public class WorkShift {
     private String name;
     private LocalTime startTime;
     private LocalTime endTime;
-    
+
+    private boolean isPartTime;
+    private boolean active;
+
     @OneToMany(mappedBy = "workShift")
     private List<WorkShiftAssignment> workShiftAssignments;
 } 

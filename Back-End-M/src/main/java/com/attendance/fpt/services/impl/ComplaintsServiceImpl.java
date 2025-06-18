@@ -13,6 +13,7 @@ import com.attendance.fpt.model.response.ResponseWithPagination;
 import com.attendance.fpt.repositories.ComplaintsRepository;
 import com.attendance.fpt.repositories.EmployeeRepository;
 import com.attendance.fpt.services.ComplaintsService;
+import com.attendance.fpt.services.NotificationService;
 import com.attendance.fpt.utils.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -32,8 +33,8 @@ import java.util.stream.Collectors;
 public class ComplaintsServiceImpl implements ComplaintsService {
 
     private final ComplaintsRepository complaintsRepository;
-    private final EmployeeRepository employeeRepository;
     private final SecurityUtil securityUtil;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -94,21 +95,19 @@ public class ComplaintsServiceImpl implements ComplaintsService {
             int page,
             int limit,
             String employeeName,
-            LocalDate startDate,
-            LocalDate endDate,
+            LocalDate createdDate,
+            LocalDate date,
             Long departmentId,
             String complaintType,
             String status) {
 
         Pageable pageable = PageRequest.of(page - 1, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        LocalDateTime startDateTime = startDate != null ? startDate.atStartOfDay() : null;
-        LocalDateTime endDateTime = endDate != null ? endDate.atTime(23, 59, 59) : null;
 
         Page<Complaint> complaints = complaintsRepository.findAllWithFilters(
                 employeeName,
-                startDateTime,
-                endDateTime,
+                createdDate,
+                date,
                 departmentId,
                 complaintType != null ? ComplaintType.valueOf(complaintType.toUpperCase()) : null,
                 status != null ? ComplaintStatus.valueOf(status.toUpperCase()) : null,
@@ -149,8 +148,10 @@ public class ComplaintsServiceImpl implements ComplaintsService {
         complaint.setResponseNote(complaintHandleRequest.getResponseNote());
         complaint.setResponseDate(LocalDateTime.now());
         complaint.setResponseBy(employee);
-
         complaintsRepository.save(complaint);
+
+        notificationService.sendNotification(employee, "Đơn khiếu nại chấm công của bạn ngày " + complaint.getDate() + " đã được phê duyệt");
+        
     }
 
     @Override
@@ -170,6 +171,7 @@ public class ComplaintsServiceImpl implements ComplaintsService {
         complaint.setResponseBy(employee);
 
         complaintsRepository.save(complaint);
+        notificationService.sendNotification(employee, "Đơn khiếu nại chấm công của bạn ngày " + complaint.getDate() + " đã bị từ chối");
     }
 
 }

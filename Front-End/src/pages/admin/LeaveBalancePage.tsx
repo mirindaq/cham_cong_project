@@ -47,6 +47,7 @@ import type { LeaveBalancePerEmployeeResponse } from "@/types/leaveBalance.type"
 import PaginationComponent from "@/components/PaginationComponent";
 import Spinner from "@/components/Spinner";
 import { getYearOptions } from "@/utils/helper";
+import { Badge } from "@/components/ui/badge";
 
 export default function LeaveBalancePage() {
   const [showAddLeaveTypeDialog, setShowAddLeaveTypeDialog] = useState(false);
@@ -98,7 +99,7 @@ export default function LeaveBalancePage() {
 
   const loadLeaveBalanceTypes = async () => {
     setLoading(true);
-    const response = await leaveTypeApi.getAllLeaveTypesActive();
+    const response = await leaveTypeApi.getAllLeaveTypes();
     setLeaveBalanceTypes(response);
     setLoading(false);
   };
@@ -292,8 +293,6 @@ export default function LeaveBalancePage() {
       try {
         await leaveTypeApi.toggleApply(id);
         toast.success("Trạng thái áp dụng đã được thay đổi thành công");
-        loadLeaveBalanceTypes();
-        loadLeaveBalances();
         const updatedTypes = leaveTypes.map((type) =>
           type.id === id ? { ...type, active: !type.active } : type
         );
@@ -303,6 +302,13 @@ export default function LeaveBalancePage() {
         toast.error("Đã xảy ra lỗi khi thay đổi trạng thái áp dụng");
       }
     }
+  };
+  const getStatusBadge = (active: boolean) => {
+    return active ? (
+      <Badge className="bg-green-500">Hoạt động</Badge>
+    ) : (
+      <Badge variant="secondary">Vô hiệu hóa</Badge>
+    );
   };
 
   if (loading) {
@@ -546,11 +552,7 @@ export default function LeaveBalancePage() {
                           <TableCell>{type.name}</TableCell>
                           <TableCell>{type.maxDayPerYear} ngày</TableCell>
                           <TableCell>
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              type.active ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {type.active ? 'Đã áp dụng' : 'Chưa áp dụng'}
-                            </span>
+                            {getStatusBadge(type.active)}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button

@@ -31,7 +31,6 @@ public interface LeaveBalanceRepository extends JpaRepository<LeaveBalance, Long
       AND (:year IS NULL OR lb.year = :year)
       AND (:departmentId IS NULL OR lb.employee.department.id = :departmentId)
        AND (:leaveBalanceType IS NULL OR lb.leaveType.name = :leaveBalanceType)
-       AND lb.leaveType.active = true
 """)
     Page<LeaveBalance> getAllLeaveBalanceByFilter(@Param("employeeName") String employeeName,
                                                   @Param("year") Long year,

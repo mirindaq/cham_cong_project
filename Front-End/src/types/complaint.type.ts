@@ -6,7 +6,7 @@ export type ComplaintResponse = {
   responseDate?: string | null;
   responseNote?: string | null;
   responseBy?: string | null;
-  employeeFullName: string;
+  employeeName: string;
   complaintType: string;
   status: ComplaintStatus;
   departmentName: string;

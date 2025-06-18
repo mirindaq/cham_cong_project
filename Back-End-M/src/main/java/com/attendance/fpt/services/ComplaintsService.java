@@ -14,8 +14,8 @@ public interface ComplaintsService {
             int page,
             int limit,
             String employeeName,
-            LocalDate startDate,
-            LocalDate endDate,
+            LocalDate createdDate,
+            LocalDate date,
             Long departmentId,
             String complaintType,
             String status

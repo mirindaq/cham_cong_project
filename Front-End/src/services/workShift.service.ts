@@ -1,3 +1,4 @@
+import type { WorkShiftAddRequest } from "@/types/workShift.type";
 import http from "@/utils/http";
 
 export const workShiftApi = {
@@ -11,11 +12,7 @@ export const workShiftApi = {
     }
   },
 
-  addShift: async (newShift: {
-    name: string;
-    startTime: string;
-    endTime: string;
-  }) => {
+  addShift: async (newShift: WorkShiftAddRequest) => {
     const response = await http.post("/work-shifts/add", newShift);
     return response.data.data;
   },
@@ -27,14 +24,35 @@ export const workShiftApi = {
     startDate: string,
     endDate: string
   ) => {
-    console.log(
-      "Fetching work shifts for employee between dates:",
-      startDate,
-      endDate
-    );
     const response = await http.get(`/work-shifts/employee`, {
       params: { startDate, endDate },
     });
+    return response.data.data;
+  },
+  getWorkShiftsByEmployeeByDateHaveAttendanceLeave: async (date: string) => {
+    const response = await http.get(
+      `/work-shifts/employee/attendance-leave?date=${date}`
+    );
+    return response.data;
+  },
+
+  getAllWorkShiftsActive: async () => {
+    const response = await http.get("/work-shifts/active");
+    return response.data.data;
+  },
+
+  updateWorkShift: async (shiftId: number) => {
+    const response = await http.put(`/work-shifts/update/${shiftId}/status`);
+    return response.data.data;
+  },
+
+  getAllWorkShiftsPartTimeActive: async () => {
+    const response = await http.get("/work-shifts/part-time/active");
+    return response.data.data;
+  },
+
+  getAllWorkShiftsPartTime: async () => {
+    const response = await http.get("/work-shifts/part-time/all");
     return response.data.data;
   },
 };

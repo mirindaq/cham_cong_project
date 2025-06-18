@@ -32,8 +32,8 @@ public class ComplaintsController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String employeeName,
-            @RequestParam(required = false) LocalDate startDate,
-            @RequestParam( required = false) LocalDate endDate,
+            @RequestParam(required = false) LocalDate createdDate,
+            @RequestParam( required = false) LocalDate date,
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) String complaintType,
             @RequestParam(required = false) String status) {
@@ -43,8 +43,8 @@ public class ComplaintsController {
                 page,
                 size,
                 employeeName,
-                startDate,
-                endDate,
+                createdDate,
+                date,
                 departmentId,
                 complaintType,
                 status);

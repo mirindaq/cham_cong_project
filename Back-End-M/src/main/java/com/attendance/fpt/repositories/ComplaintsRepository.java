@@ -25,15 +25,15 @@ public interface ComplaintsRepository extends JpaRepository<Complaint, Long> {
 
     @Query("SELECT c FROM Complaint c " +
             "WHERE (:employeeName IS NULL OR LOWER(c.employee.fullName) LIKE LOWER(CONCAT('%', :employeeName, '%'))) " +
-            "AND (:startDateTime IS NULL OR c.createdAt >= :startDateTime) " +
-            "AND (:endDateTime IS NULL OR c.createdAt <= :endDateTime) " +
+            "AND (:createdDate IS NULL OR FUNCTION('DATE', c.createdAt) = :createdDate) " +
+            "AND (:date IS NULL OR c.date = :date) " +
             "AND (:departmentId IS NULL OR c.employee.department.id = :departmentId) " +
             "AND (:complaintType IS NULL OR c.complaintType = :complaintType) " +
             "AND (:status IS NULL OR c.status = :status)")
     Page<Complaint> findAllWithFilters(
             @Param("employeeName") String employeeName,
-            @Param("startDateTime") LocalDateTime startDateTime,
-            @Param("endDateTime") LocalDateTime endDateTime,
+            @Param("createdDate") LocalDate createdDate,
+            @Param("date") LocalDate date,
             @Param("departmentId") Long departmentId,
             @Param("complaintType") ComplaintType complaintType,
             @Param("status") ComplaintStatus status,

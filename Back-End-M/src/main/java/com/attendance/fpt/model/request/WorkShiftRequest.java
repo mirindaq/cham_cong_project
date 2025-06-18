@@ -14,5 +14,9 @@ public class WorkShiftRequest {
     
     @NotNull(message = "End time is required")
     private String endTime;
+    @NotNull(message = "partTime is required")
+    private boolean partTime;
+    @NotNull(message = "active is required")
+    private boolean active;
 
 } 
