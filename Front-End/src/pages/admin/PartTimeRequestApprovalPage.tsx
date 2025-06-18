@@ -605,18 +605,6 @@ export default function PartTimeRequestApprovalPage() {
                   </div>
                 </div>
 
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <AlertCircle className="w-4 h-4" />
-                    <span className="text-sm text-muted-foreground font-medium">
-                      Lý do đăng ký:
-                    </span>
-                  </div>
-                  <div className="bg-gray-50 border rounded p-3 text-sm text-gray-700 whitespace-pre-line">
-                    {selectedDetail.reason}
-                  </div>
-                </div>
-
                 {(selectedDetail.status === "APPROVED" ||
                   selectedDetail.status === "REJECTED") && (
                   <div className="border-t pt-4">

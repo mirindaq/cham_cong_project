@@ -87,15 +87,6 @@ public class RevertLeaveRequestServiceImpl implements RevertLeaveRequestService 
         WorkShift workShift = workShiftRepository.findById(revertLeaveRequestAddRequest.getWorkShiftId())
                 .orElseThrow(() -> new ResourceNotFoundException("Work shift not found"));
 
-        boolean exists = revertLeaveRequestRepository.existsByEmployee_IdAndDateAndWorkShift_Id(
-                employee.getId(),
-                revertLeaveRequestAddRequest.getDate(),
-                revertLeaveRequestAddRequest.getWorkShiftId()
-        );
-
-        if (exists) {
-            throw new ConflictException("You have already requested this part-time shift");
-        }
 
         Attendance attendance = attendanceRepository.findByAttendanceLeaveByDateAndWorkShiftIdAndStatus(revertLeaveRequestAddRequest.getDate(),
                         revertLeaveRequestAddRequest.getWorkShiftId()

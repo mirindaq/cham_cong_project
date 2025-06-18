@@ -109,15 +109,6 @@ public class PartTimeRequestServiceImpl implements PartTimeRequestService {
             throw new ConflictException("Cannot create part-time request for work shift that has already started");
         }
 
-        boolean exists = partTimeRequestRepository.existsByEmployee_IdAndDateAndWorkShift_Id(
-                employee.getId(),
-                partTimeRequestAddRequest.getDate(),
-                partTimeRequestAddRequest.getWorkShiftId()
-        );
-
-        if (exists) {
-            throw new ConflictException("You have already requested this part-time shift");
-        }
 
         PartTimeRequest partTimeRequest = PartTimeRequest.builder()
                 .date(partTimeRequestAddRequest.getDate())
