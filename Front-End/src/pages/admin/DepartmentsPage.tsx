@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Trash } from "lucide-react";
 import { AdminLayout } from "@/components/admin-layout";
 import { departmentApi } from "@/services/department.service";
 import Spinner from "@/components/Spinner";
@@ -101,6 +101,19 @@ export default function DepartmentsPage() {
     setEditOpen(true);
   };
 
+  const handleDeleteDepartment = async (departmentId: number) => {
+    const confirm = window.confirm("Bạn có chắc chắn muốn xóa phòng ban này không?");
+    if (!confirm) return;
+    const deletedDept = await departmentApi.deleteDepartment(departmentId);
+    if (deletedDept) {
+      setDepartments((prev) => prev.filter((dept) => dept.id !== departmentId));
+      toast.success("Xóa phòng ban thành công!");
+    }
+    else {
+      toast.error("Không thể xóa phòng ban đã có nhân viên!");
+    }
+  };
+
   if (loading) return <Spinner layout="admin" />;
 
   return (
@@ -161,13 +174,21 @@ export default function DepartmentsPage() {
                       ) + 1}
                     </TableCell>
                     <TableCell>{department.name}</TableCell>
-                    <TableCell>
+                    <TableCell className="flex items-center gap-2">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => openEditModal(department)}
                       >
                         <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteDepartment(department.id)}
+                        style={{ color: "red" }}
+                      >
+                        <Trash className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>

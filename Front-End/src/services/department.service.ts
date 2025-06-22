@@ -33,4 +33,14 @@ export const departmentApi = {
       return null;
     }
   },
+
+  deleteDepartment: async (departmentId: number) => {
+    try {
+      const response = await http.delete(`/departments/delete/${departmentId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Lỗi khi xóa phòng ban:", error);
+      return null;
+    }
+  }
 };

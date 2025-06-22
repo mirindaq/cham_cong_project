@@ -2,6 +2,7 @@ package com.attendance.fpt.controller;
 
 import com.attendance.fpt.model.request.EmployeeAddRequest;
 import com.attendance.fpt.model.request.EmployeeProfileRequest;
+import com.attendance.fpt.model.request.UploadRequest;
 import com.attendance.fpt.model.response.EmployeeResponse;
 import com.attendance.fpt.model.response.ResponseSuccess;
 import com.attendance.fpt.model.response.ResponseWithPagination;
@@ -9,6 +10,7 @@ import com.attendance.fpt.services.EmployeeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -85,5 +87,10 @@ public class EmployeeController {
         return ResponseEntity.ok(new ResponseSuccess<>(HttpStatus.OK, "Get employee count success", count));
     }
 
-
+    @PutMapping(value = "/update-avatar",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ResponseSuccess<EmployeeResponse>> updateAvatar(@ModelAttribute UploadRequest uploadRequest) {
+        return ResponseEntity.ok(new ResponseSuccess<>(HttpStatus.OK,
+                "Update avatar success", employeeService.updateAvatar(uploadRequest)));
+    }
 }

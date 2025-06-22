@@ -2,6 +2,7 @@ package com.attendance.fpt.services;
 
 import com.attendance.fpt.model.request.EmployeeAddRequest;
 import com.attendance.fpt.model.request.EmployeeProfileRequest;
+import com.attendance.fpt.model.request.UploadRequest;
 import com.attendance.fpt.model.response.EmployeeResponse;
 import com.attendance.fpt.model.response.ResponseWithPagination;
 
@@ -31,4 +32,6 @@ public interface EmployeeService {
     EmployeeResponse getProfile();
 
     long countEmployees();
+
+    EmployeeResponse updateAvatar(UploadRequest uploadRequest);
 } 

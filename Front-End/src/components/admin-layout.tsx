@@ -107,11 +107,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                     <Link
                       key={item.name}
                       to={item.href}
-                      className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
-                        isActive(item.href)
+                      className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${isActive(item.href)
                           ? "bg-primary text-primary-foreground"
                           : "hover:bg-muted"
-                      }`}
+                        }`}
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <item.icon className="h-5 w-5" />
@@ -130,12 +129,17 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="h-10 w-10 transition-opacity group-hover:opacity-80">
                     <AvatarImage
-                      src="/placeholder.svg?height=32&width=32"
-                      alt="Admin"
+                      src={user?.avatar || "/placeholder.svg?height=80&width=80"}
+                      alt={user?.fullName}
                     />
-                    <AvatarFallback>AD</AvatarFallback>
+                    <AvatarFallback>
+                      {user?.fullName
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
@@ -171,11 +175,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
-                  isActive(item.href)
+                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${isActive(item.href)
                     ? "bg-primary text-primary-foreground"
                     : "hover:bg-muted"
-                }`}
+                  }`}
               >
                 <item.icon className="h-5 w-5" />
                 {item.name}

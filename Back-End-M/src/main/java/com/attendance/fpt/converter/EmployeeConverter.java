@@ -22,6 +22,7 @@ public class EmployeeConverter {
                 .leaveBalanceResponses(employee.getLeaveBalance().stream()
                         .map(LeaveBalanceConverter::toResponse)
                         .toList())
+                .avatar(employee.getAvatar())
                 .build();
     }
 

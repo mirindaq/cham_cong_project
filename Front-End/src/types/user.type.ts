@@ -12,6 +12,7 @@ export type UserResponse = {
   employeeType: string;
   active: boolean;
   leaveBalanceResponses: LeaveBalanceResponse[];
+  avatar: string;
 };
 
 export type UserRequest = {

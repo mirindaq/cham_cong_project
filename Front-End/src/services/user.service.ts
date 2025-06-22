@@ -34,4 +34,14 @@ export const userApi = {
     const response = await http.get("/employees/employee-to-assignment");
     return response.data.data;
   },
+  updateAvatar: async (file: any) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await http.put("/employees/update-avatar", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  },
 };

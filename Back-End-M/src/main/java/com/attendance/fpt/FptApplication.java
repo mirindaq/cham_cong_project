@@ -41,7 +41,7 @@ public class 	FptApplication {
 		System.setProperty("SPRING_APP_JWT_REFRESH_SECRET", dotenv.get("SPRING_APP_JWT_REFRESH_SECRET"));
 		System.setProperty("SPRING_APP_JWT_REFRESH_EXPIRATION_MS", dotenv.get("SPRING_APP_JWT_REFRESH_EXPIRATION_MS"));
 
-
+		System.setProperty("CLOUDINARY_URL", dotenv.get("CLOUDINARY_URL"));
 		System.setProperty("LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY", dotenv.get("LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY"));
 		SpringApplication.run(FptApplication.class, args);
 	}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "../../components/ui/button";
 import {
   Card,
@@ -26,9 +26,13 @@ import { userApi } from "@/services/user.service";
 import { authApi } from "@/services/authe.service";
 import { toast } from "sonner";
 import { localStorageUtil } from "@/utils/localStorageUtil";
+import { useAuth } from "@/contexts/AuthContext";
 
 function ProfilePage() {
   const [loading, setLoading] = useState(true);
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [profileData, setProfileData] = useState({
     fullName: "",
     email: "",
@@ -48,7 +52,7 @@ function ProfilePage() {
     newPassword: "",
     confirmPassword: "",
   });
-
+  const {  setUser } = useAuth();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -73,6 +77,11 @@ function ProfilePage() {
             employeeType: profile.employeeType,
           });
 
+          // Set avatar URL if available
+          if (profile.avatar) {
+            setAvatarUrl(profile.avatar);
+          }
+
           setPasswordData((prev) => ({
             ...prev,
             username: profile.email,
@@ -88,6 +97,45 @@ function ProfilePage() {
 
     fetchProfile();
   }, []);
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Vui lòng chọn file hình ảnh!");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Kích thước file không được vượt quá 5MB!");
+      return;
+    }
+
+    try {
+      setAvatarLoading(true);
+      const response = await userApi.updateAvatar(file);
+      
+      if (response.data?.avatar) {
+        setAvatarUrl(response.data.avatar);
+        setUser(response.data);
+        toast.success("Cập nhật avatar thành công!");
+      } else {
+        toast.success("Cập nhật avatar thành công!");
+      }
+    } catch (error) {
+      console.error("Lỗi khi cập nhật avatar:", error);
+      toast.error("Có lỗi xảy ra khi cập nhật avatar. Vui lòng thử lại!");
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
 
   const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -148,18 +196,35 @@ function ProfilePage() {
     <EmployeeLayout>
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Avatar className="h-20 w-20">
-            <AvatarImage
-              src="/placeholder.svg?height=80&width=80"
-              alt={profileData.fullName}
-            />
-            <AvatarFallback>
-              {profileData.fullName
-                .split(" ")
-                .map((n) => n[0])
-                .join("")}
-            </AvatarFallback>
-          </Avatar>
+          <div className={`relative group ${avatarLoading ? 'cursor-not-allowed' : 'cursor-pointer'}`} onClick={avatarLoading ? undefined : handleAvatarClick}>
+            <Avatar className="h-20 w-20 transition-opacity group-hover:opacity-80">
+              <AvatarImage
+                src={avatarUrl || "/placeholder.svg?height=80&width=80"}
+                alt={profileData.fullName}
+              />
+              <AvatarFallback>
+                {profileData.fullName
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")}
+              </AvatarFallback>
+            </Avatar>
+            {avatarLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+              </div>
+            )}
+            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="text-white text-xs font-medium">Thay đổi</span>
+            </div>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarChange}
+            className="hidden"
+          />
           <div>
             <h1 className="text-2xl font-bold">{profileData.fullName}</h1>
             <p className="text-muted-foreground">

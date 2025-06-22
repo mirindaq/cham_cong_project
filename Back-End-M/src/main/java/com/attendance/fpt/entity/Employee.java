@@ -27,7 +27,7 @@ public class Employee {
     private boolean active;
     private LocalDate dob;
     private LocalDate joinDate;
-    
+    private String avatar;
     @ManyToOne
     @JoinColumn(name = "department_id")
     private Department department;

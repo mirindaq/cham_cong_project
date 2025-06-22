@@ -23,5 +23,6 @@ public class EmployeeResponse {
     private LocalDate joinDate;
     private String employeeType;
     private boolean active;
+    private String avatar;
     private List<LeaveBalanceResponse> leaveBalanceResponses;
 }

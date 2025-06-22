@@ -15,6 +15,7 @@ interface AuthContextInterface {
   pendingUsername: string | null;
   setPendingUsername: (username: string | null) => void;
   user: UserResponse | null;
+  setUser: (user: UserResponse | null) => void;
 }
 
 const AuthContext = createContext<AuthContextInterface | undefined>(undefined);
@@ -117,6 +118,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         login,
         logout,
         user,
+        setUser,
       }}
     >
       {children}

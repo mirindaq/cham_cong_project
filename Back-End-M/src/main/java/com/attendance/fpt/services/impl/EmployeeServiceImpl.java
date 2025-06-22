@@ -11,10 +11,12 @@ import com.attendance.fpt.exceptions.custom.ConflictException;
 import com.attendance.fpt.exceptions.custom.ResourceNotFoundException;
 import com.attendance.fpt.model.request.EmployeeAddRequest;
 import com.attendance.fpt.model.request.EmployeeProfileRequest;
+import com.attendance.fpt.model.request.UploadRequest;
 import com.attendance.fpt.model.response.EmployeeResponse;
 import com.attendance.fpt.model.response.ResponseWithPagination;
 import com.attendance.fpt.repositories.*;
 import com.attendance.fpt.services.EmployeeService;
+import com.attendance.fpt.services.UploadService;
 import com.attendance.fpt.utils.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,6 +25,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +41,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final LeaveTypeRepository leaveTypeRepository;
     private final SecurityUtil securityUtil;
     private final PasswordEncoder passwordEncoder;
+    private final UploadService uploadService;
 
     @Override
     @Transactional
@@ -197,6 +201,26 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public long countEmployees() {
         return employeeRepository.count();
+    }
+
+    @Override
+    public EmployeeResponse updateAvatar(UploadRequest uploadRequest) {
+        Employee employee = securityUtil.getCurrentUser();
+
+        MultipartFile file = uploadRequest.getFile();
+        if (file == null || file.isEmpty()) {
+            throw new ConflictException("No file uploaded");
+        }
+
+        String avatarUrl = uploadService.upload(file);
+        if (avatarUrl == null || avatarUrl.isBlank()) {
+            throw new ConflictException("Failed to upload avatar");
+        }
+
+        employee.setAvatar(avatarUrl);
+        employeeRepository.save(employee);
+
+        return EmployeeConverter.toResponse(employee);
     }
 
 }
