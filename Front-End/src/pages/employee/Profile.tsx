@@ -112,6 +112,16 @@ function ProfilePage() {
       return;
     }
 
+    // Validate file extension
+    const allowedExtensions = ['.png', '.jpg', '.jpeg', '.gif'];
+    const fileName = file.name.toLowerCase();
+    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+    
+    if (!hasValidExtension) {
+      toast.error("Chỉ chấp nhận file PNG, JPG, JPEG, GIF!");
+      return;
+    }
+
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Kích thước file không được vượt quá 5MB!");
