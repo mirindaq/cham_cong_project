@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -31,6 +33,13 @@ public class UploadServiceImpl implements UploadService {
     public String upload(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("File must not be null or empty");
+        }
+        List<String> allowedExtensions = Arrays.asList(".png", ".jpg", ".jpeg",".gif");
+        String fileName = file.getOriginalFilename().toLowerCase();
+        boolean hasValidExtension = allowedExtensions.stream().anyMatch(fileName::endsWith);
+
+        if (!hasValidExtension) {
+            throw new IllegalArgumentException("File require need end with PNG, JPG, JPEG orGIF");
         }
         return uploadImage(file);
     }
