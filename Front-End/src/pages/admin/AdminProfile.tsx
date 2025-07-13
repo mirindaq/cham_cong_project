@@ -93,9 +93,20 @@ function AdminProfile() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+   
     // Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error("Vui lòng chọn file hình ảnh!");
+      return;
+    }
+
+    // Validate file extension
+    const allowedExtensions = ['.png', '.jpg', '.jpeg', '.gif'];
+    const fileName = file.name.toLowerCase();
+    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+    
+    if (!hasValidExtension) {
+      toast.error("Chỉ chấp nhận file PNG, JPG, JPEG, GIF!");
       return;
     }
 
@@ -104,6 +115,7 @@ function AdminProfile() {
       toast.error("Kích thước file không được vượt quá 5MB!");
       return;
     }
+
 
     try {
       setAvatarLoading(true);

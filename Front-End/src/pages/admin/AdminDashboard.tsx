@@ -577,7 +577,7 @@ function AdminDashboard() {
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {leaveOverallStatistics.map((entry: any, index: any) => (
+                    {leaveOverallStatistics.map(( _: any, index: any) => (
                       <Cell
                         key={`cell-${index}`}
                         fill={COLORS[index % COLORS.length]}

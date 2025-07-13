@@ -30,7 +30,8 @@ import {
   Clock,
   RotateCcw,
   CalendarDays,
-  ClipboardList,
+  CalendarSync,
+  Newspaper,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -77,12 +78,18 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       icon: RotateCcw,
     },
     {
+      name: "Đơn xin đổi ca làm",
+      href: "/admin/shift-change-approvals",
+      icon: CalendarSync,
+    },
+    {
       name: "Quản lý số ngày nghỉ phép",
       href: "/admin/leave-balance",
       icon: CalendarDays,
     },
     { name: "Chấm công", href: "/admin/attendances", icon: ClipboardCheck },
     { name: "Báo cáo", href: "/admin/reports", icon: FileText },
+    { name: "Tin tức", href: "/admin/news", icon: Newspaper },
     { name: "Hồ sơ cá nhân", href: "/admin/profile", icon: User },
   ];
   const isActive = (path: string): boolean => {
@@ -107,10 +114,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                     <Link
                       key={item.name}
                       to={item.href}
-                      className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${isActive(item.href)
+                      className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
+                        isActive(item.href)
                           ? "bg-primary text-primary-foreground"
                           : "hover:bg-muted"
-                        }`}
+                      }`}
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <item.icon className="h-5 w-5" />
@@ -131,7 +139,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Avatar className="h-10 w-10 transition-opacity group-hover:opacity-80">
                     <AvatarImage
-                      src={user?.avatar || "/placeholder.svg?height=80&width=80"}
+                      src={
+                        user?.avatar || "/placeholder.svg?height=80&width=80"
+                      }
                       alt={user?.fullName}
                     />
                     <AvatarFallback>
@@ -175,10 +185,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${isActive(item.href)
+                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
+                  isActive(item.href)
                     ? "bg-primary text-primary-foreground"
                     : "hover:bg-muted"
-                  }`}
+                }`}
               >
                 <item.icon className="h-5 w-5" />
                 {item.name}

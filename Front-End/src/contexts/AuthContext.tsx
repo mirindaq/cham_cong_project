@@ -22,7 +22,7 @@ const AuthContext = createContext<AuthContextInterface | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [accessToken, setAccessToken] = useState<string | null>( null  );
-  const [refreshToken, setRefreshToken] = useState<string | null>( null );
+  const [, setRefreshToken] = useState<string | null>( null );
   const [role, setRole] = useState<string | null>( null );
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [pendingUsername, setPendingUsername] = useState<string | null>(null);
@@ -94,7 +94,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     try {
-      const response = await authApi.logout(accessToken!);
+      const response = await authApi.logout();
       if (response.status === 200) {
         clearAuth();
         navigate("/login");

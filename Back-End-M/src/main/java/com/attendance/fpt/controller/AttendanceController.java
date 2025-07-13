@@ -1,5 +1,6 @@
 package com.attendance.fpt.controller;
 
+import com.attendance.fpt.model.request.AttendanceUpdateRequest;
 import com.attendance.fpt.model.request.CheckInRequest;
 import com.attendance.fpt.model.request.CheckOutRequest;
 import com.attendance.fpt.model.response.AttendanceWorkShiftResponse;
@@ -8,6 +9,7 @@ import com.attendance.fpt.model.response.ResponseWithPagination;
 import com.attendance.fpt.services.AttendanceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -61,7 +63,7 @@ public class AttendanceController {
         ));
     }
 
-    @PostMapping("/check-in")
+    @PostMapping(value = "/check-in")
     @PreAuthorize("hasRole('ROLE_EMPLOYEE')")
     public ResponseEntity<ResponseSuccess<AttendanceWorkShiftResponse>> checkIn(
             @RequestBody CheckInRequest request) {
@@ -80,6 +82,29 @@ public class AttendanceController {
                 HttpStatus.OK,
                 "Check-out successful",
                 attendanceService.checkOut(checkOutRequest)
+        ));
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<ResponseSuccess<AttendanceWorkShiftResponse>> getAttendanceById(
+            @PathVariable("id") Long attendanceId
+    ) {
+        return ResponseEntity.ok(new ResponseSuccess<>(
+                HttpStatus.OK,
+                "Get attendance detail success",
+                attendanceService.getAttendanceById( attendanceId)
+        ));
+    }
+
+    @PutMapping("/update/{workShiftAssignmentId}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<ResponseSuccess<AttendanceWorkShiftResponse>> updateAttendance( @PathVariable("workShiftAssignmentId") Long workShiftAssignmentId,
+                                                                                              @RequestBody AttendanceUpdateRequest attendanceUpdateRequest) {
+        return ResponseEntity.ok(new ResponseSuccess<>(
+                HttpStatus.OK,
+                "Get recent checkers success",
+                attendanceService.updateAttendance( workShiftAssignmentId, attendanceUpdateRequest)
         ));
     }
 }

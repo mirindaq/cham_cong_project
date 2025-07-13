@@ -80,7 +80,7 @@ function LeaveRequestsPage() {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [reason, setReason] = useState("");
-  const [loading, setLoading] = useState<boolean>(false);
+  const [, setLoading] = useState<boolean>(false);
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
 
   // States for "Đăng ký đi làm lại" tab
@@ -96,7 +96,6 @@ function LeaveRequestsPage() {
   const [revertLeaveRequests, setRevertLeaveRequests] = useState<
     RevertLeaveRequestResponse[]
   >([]);
-  const [loadingRevert, setLoadingRevert] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [currentPageRevert, setCurrentPageRevert] = useState<number>(1);
   const [totalPage, setTotalPage] = useState<number>(1);
@@ -233,13 +232,18 @@ function LeaveRequestsPage() {
       workShiftId: Number.parseInt(selectedShift),
     };
 
-    await leaveRequestApi.createLeaveRequest(newLeaveRequest);
-    toast.success("Đăng ký giấy nghỉ phép thành công");
-    setLeaveType("");
-    setStartDate(undefined);
-    setEndDate(undefined);
-    setReason("");
-    setSelectedShift("");
+    try {
+      await leaveRequestApi.createLeaveRequest(newLeaveRequest);
+      toast.success("Đăng ký giấy nghỉ phép thành công");
+      setLeaveType("");
+      setStartDate(undefined);
+      setEndDate(undefined);
+      setReason("");
+      setSelectedShift("");
+    } catch (error: any) {
+      toast.error("Vui lòng nhập đầy đủ thông tin");
+    }
+
     if (tab === "leave-request") {
       loadLeaveRequests();
     }
@@ -520,25 +524,25 @@ function LeaveRequestsPage() {
                             <TableCell>
                               {request.createdAt
                                 ? format(
-                                    parseISO(request.createdAt),
-                                    "dd/MM/yyyy HH:mm:ss"
-                                  )
+                                  parseISO(request.createdAt),
+                                  "dd/MM/yyyy HH:mm:ss"
+                                )
                                 : "N/A"}
                             </TableCell>
                             <TableCell>
                               {request.startDate
                                 ? format(
-                                    parseISO(request.startDate),
-                                    "dd/MM/yyyy"
-                                  )
+                                  parseISO(request.startDate),
+                                  "dd/MM/yyyy"
+                                )
                                 : "N/A"}
                             </TableCell>
                             <TableCell>
                               {request.endDate
                                 ? format(
-                                    parseISO(request.endDate),
-                                    "dd/MM/yyyy"
-                                  )
+                                  parseISO(request.endDate),
+                                  "dd/MM/yyyy"
+                                )
                                 : "N/A"}
                             </TableCell>
                             <TableCell>
@@ -619,6 +623,7 @@ function LeaveRequestsPage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="revertDate">Ngày đi làm lại</Label>
+
                     <Input
                       id="revertDate"
                       name="revertDate"
@@ -862,9 +867,9 @@ function LeaveRequestsPage() {
                     <span className="text-sm font-medium">
                       {selectedDetail.createdAt
                         ? format(
-                            parseISO(selectedDetail.createdAt),
-                            "dd/MM/yyyy HH:mm:ss"
-                          )
+                          parseISO(selectedDetail.createdAt),
+                          "dd/MM/yyyy HH:mm:ss"
+                        )
                         : "N/A"}
                     </span>
                   </div>
@@ -890,9 +895,9 @@ function LeaveRequestsPage() {
                       <span className="text-sm font-medium">
                         {selectedDetail.startDate
                           ? format(
-                              parseISO(selectedDetail.startDate),
-                              "dd/MM/yyyy"
-                            )
+                            parseISO(selectedDetail.startDate),
+                            "dd/MM/yyyy"
+                          )
                           : "N/A"}
                       </span>
                     </div>
@@ -906,9 +911,9 @@ function LeaveRequestsPage() {
                       <span className="text-sm font-medium">
                         {selectedDetail.endDate
                           ? format(
-                              parseISO(selectedDetail.endDate),
-                              "dd/MM/yyyy"
-                            )
+                            parseISO(selectedDetail.endDate),
+                            "dd/MM/yyyy"
+                          )
                           : "N/A"}
                       </span>
                     </div>
@@ -931,55 +936,55 @@ function LeaveRequestsPage() {
                 {/* Thông tin duyệt */}
                 {(selectedDetail.status === "APPROVED" ||
                   selectedDetail.status === "REJECTED") && (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground font-medium">
-                        Thông tin duyệt:
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
                       <div className="flex items-center gap-2">
-                        <UserIcon className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          Người duyệt:
-                        </span>
-                        <span className="text-sm font-medium">
-                          {selectedDetail.responseBy || "Chưa phản hồi"}
+                        <AlertCircle className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground font-medium">
+                          Thông tin duyệt:
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          Ngày duyệt:
-                        </span>
-                        <span className="text-sm font-medium">
-                          {selectedDetail.responseDate
-                            ? format(
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center gap-2">
+                          <UserIcon className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
+                            Người duyệt:
+                          </span>
+                          <span className="text-sm font-medium">
+                            {selectedDetail.responseBy || "Chưa phản hồi"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
+                            Ngày duyệt:
+                          </span>
+                          <span className="text-sm font-medium">
+                            {selectedDetail.responseDate
+                              ? format(
                                 parseISO(selectedDetail.responseDate),
                                 "dd/MM/yyyy HH:mm:ss"
                               )
-                            : "Chưa phản hồi"}
-                        </span>
+                              : "Chưa phản hồi"}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <AlertCircle className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground font-medium">
+                            Lý do{" "}
+                            {selectedDetail.status === "APPROVED"
+                              ? "duyệt"
+                              : "từ chối"}
+                            :
+                          </span>
+                        </div>
+                        <div className="bg-gray-50 border rounded p-3 text-sm text-gray-700 whitespace-pre-line">
+                          {selectedDetail.responseNote || "Không có"}
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <AlertCircle className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground font-medium">
-                          Lý do{" "}
-                          {selectedDetail.status === "APPROVED"
-                            ? "duyệt"
-                            : "từ chối"}
-                          :
-                        </span>
-                      </div>
-                      <div className="bg-gray-50 border rounded p-3 text-sm text-gray-700 whitespace-pre-line">
-                        {selectedDetail.responseNote || "Không có"}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                  )}
               </div>
             )}
 

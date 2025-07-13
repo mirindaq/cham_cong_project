@@ -120,18 +120,10 @@ http.interceptors.response.use(
             toast.error("Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn.");
           }
           break;
-        case 404:
-          toast.error("Không tìm thấy tài nguyên yêu cầu.");
-          break;
-        case 409:
-
-          break;
         case 500:
           if (data.message === "Not enough leave balance for this request") {
             toast.error("Không đủ số ngày nghỉ phép để thực hiện yêu cầu này.");
-          } else {
-            toast.error("Lỗi hệ thống. Vui lòng thử lại sau.");
-          }
+          } 
           break;
       }
     } else if (request) {

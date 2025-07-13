@@ -1,4 +1,4 @@
-import { use, useCallback, useEffect, useState } from "react";
+import {  useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { format, parseISO } from "date-fns";
+import { format, parseISO, subDays } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { EmployeeLayout } from "@/components/employee-layout";
 import {
@@ -76,7 +76,7 @@ function DisputesPage() {
   const [loading, setLoading] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPage, setTotalPage] = useState<number>(1);
-  const { user, accessToken } = useAuth();
+  const { accessToken } = useAuth();
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<any>(null);
 
@@ -124,11 +124,7 @@ function DisputesPage() {
       setRequestedChange("");
       setReason("");
     } catch (error: any) {
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        "Lỗi khi yêu cầu khiếu nại";
-      toast.error(message);
+      toast.error("Vui lòng nhập đầy đủ thông tin");
     }
   };
 
@@ -197,6 +193,7 @@ function DisputesPage() {
                       e.target.value ? new Date(e.target.value) : undefined
                     )
                   }
+                  min={format(subDays(new Date(), 2), "yyyy-MM-dd")}
                   required
                 />
               </div>

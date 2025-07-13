@@ -20,6 +20,7 @@ public class Employee {
     private Long id;
     
     private String fullName;
+    @Column(unique = true, nullable = false)
     private String email;
     private String phone;
     private String address;

@@ -14,6 +14,7 @@ import com.attendance.fpt.model.response.LeaveRequestResponse;
 import com.attendance.fpt.model.response.ResponseWithPagination;
 import com.attendance.fpt.model.response.RevertLeaveRequestResponse;
 import com.attendance.fpt.repositories.*;
+import com.attendance.fpt.services.EmailService;
 import com.attendance.fpt.services.NotificationService;
 import com.attendance.fpt.services.RevertLeaveRequestService;
 import com.attendance.fpt.utils.SecurityUtil;
@@ -40,6 +41,7 @@ public class RevertLeaveRequestServiceImpl implements RevertLeaveRequestService 
     private final WorkShiftAssignmentRepository workShiftAssignmentRepository;
     private final SecurityUtil securityUtil;
     private final NotificationService notificationService;
+    private final EmailService emailService;
 
     @Override
     public ResponseWithPagination<List<RevertLeaveRequestResponse>> getAllRevertLeaveRequests(int page, int size, String employeeName, LocalDate createdDate,LocalDate date, Long departmentId, Long workShiftId, String status) {
@@ -167,6 +169,23 @@ public class RevertLeaveRequestServiceImpl implements RevertLeaveRequestService 
         revertLeaveRequestRepository.save(revertLeaveRequest);
 
         notificationService.sendNotification(revertLeaveRequest.getEmployee(), "Đơn xin đi làm lại ngày " + revertLeaveRequest.getDate() + " đã được phê duyệt");
+
+        String message = "Đơn xin đi làm lại vào ngày " + revertLeaveRequest.getDate() + " của bạn đã được phê duyệt. "
+                + "Bạn sẽ quay lại làm việc theo ca từ "
+                + revertLeaveRequest.getWorkShift().getStartTime()
+                + " đến " + revertLeaveRequest.getWorkShift().getEndTime() + ".";
+
+        if (revertLeaveRequestHandleRequest.getResponseNote() != null && !revertLeaveRequestHandleRequest.getResponseNote().isBlank()) {
+            message += " Ghi chú từ quản lý: " + revertLeaveRequestHandleRequest.getResponseNote();
+        }
+
+        emailService.sendApprovalEmail(
+                revertLeaveRequest.getEmployee().getEmail(),
+                message,
+                true
+        );
+
+
     }
 
     @Override
@@ -189,5 +208,18 @@ public class RevertLeaveRequestServiceImpl implements RevertLeaveRequestService 
         revertLeaveRequestRepository.save(revertLeaveRequest);
 
         notificationService.sendNotification(revertLeaveRequest.getEmployee(), "Đơn xin đi làm lại ngày " + revertLeaveRequest.getDate() + " đã bị từ chối");
+
+        String message = "Đơn xin đi làm lại vào ngày " + revertLeaveRequest.getDate() + " của bạn đã bị từ chối.";
+
+        if (revertLeaveRequestHandleRequest.getResponseNote() != null && !revertLeaveRequestHandleRequest.getResponseNote().isBlank()) {
+            message += " Lý do: " + revertLeaveRequestHandleRequest.getResponseNote();
+        }
+
+        emailService.sendApprovalEmail(
+                revertLeaveRequest.getEmployee().getEmail(),
+                message,
+                false
+        );
+
     }
 }

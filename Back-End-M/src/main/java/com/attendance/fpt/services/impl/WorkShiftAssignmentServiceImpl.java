@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -57,7 +58,8 @@ public class WorkShiftAssignmentServiceImpl implements WorkShiftAssignmentServic
             throw new ConflictException("Employee ID does not match the assignment");
         }
 
-        if ( assignment.getDateAssign().isBefore(java.time.LocalDate.now())) {
+        if ( assignment.getDateAssign().isBefore(LocalDate.now()) ||
+         (assignment.getDateAssign().equals(LocalDate.now()) && assignment.getWorkShift().getStartTime().isBefore(LocalTime.now()))) {
             throw new ConflictException("Cannot delete past assignments");
         }
 
@@ -75,7 +77,9 @@ public class WorkShiftAssignmentServiceImpl implements WorkShiftAssignmentServic
 
         Employee employee = employeeRepository.findById(request.getEmployeeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
-        if (request.getDateAssign().isBefore(LocalDate.now())) {
+
+        if (request.getDateAssign().isBefore(LocalDate.now()) ||
+                (request.getDateAssign().equals(LocalDate.now()) && workShift.getStartTime().isBefore(java.time.LocalTime.now()))) {
             throw new ConflictException("Cannot assign work shift in the past");
         }
 

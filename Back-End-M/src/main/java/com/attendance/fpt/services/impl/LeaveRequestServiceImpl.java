@@ -9,6 +9,7 @@ import com.attendance.fpt.model.request.LeaveRequestAddRequest;
 import com.attendance.fpt.model.request.LeaveRequestHandleRequest;
 import com.attendance.fpt.model.response.*;
 import com.attendance.fpt.repositories.*;
+import com.attendance.fpt.services.EmailService;
 import com.attendance.fpt.services.LeaveRequestService;
 import com.attendance.fpt.services.NotificationService;
 import com.attendance.fpt.utils.SecurityUtil;
@@ -37,6 +38,8 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
     private final WorkShiftRepository workShiftRepository;
     private final SecurityUtil securityUtil;
     private final NotificationService notificationService;
+    private final EmailService emailService;
+
     @Override
     @Transactional
     public LeaveRequestResponse createLeaveRequest(LeaveRequestAddRequest request) {
@@ -128,6 +131,22 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
 
         notificationService.sendNotification(employee, "Đơn xin nghỉ phép của bạn ngày " +
                 leaveRequest.getStartDate() + " đến " + leaveRequest.getEndDate() + " đã bị từ chối");
+
+        String message = "Đơn xin nghỉ phép của bạn từ ngày "
+                + leaveRequest.getStartDate()
+                + " đến " + leaveRequest.getEndDate()
+                + " đã bị từ chối.";
+
+        if (leaveRequestHandleRequest.getResponseNote() != null && !leaveRequestHandleRequest.getResponseNote().isBlank()) {
+            message += " Lý do: " + leaveRequestHandleRequest.getResponseNote();
+        }
+
+        emailService.sendApprovalEmail(
+                leaveRequest.getEmployee().getEmail(),
+                message,
+                false
+        );
+
     }
 
     @Override
@@ -191,6 +210,26 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         notificationService.sendNotification(leaveRequest.getEmployee(),
                 "Đơn xin nghỉ phép của bạn ngày " + leaveRequest.getStartDate() + " đến " +
                         leaveRequest.getEndDate() + " đã được phê duyệt");
+
+        String message = "Đơn xin nghỉ phép của bạn từ ngày "
+                + leaveRequest.getStartDate()
+                + " đến " + leaveRequest.getEndDate()
+                + " đã được phê duyệt. "
+                + "Bạn sẽ được nghỉ theo ca "
+                + leaveRequest.getWorkShift().getStartTime()
+                + " - " + leaveRequest.getWorkShift().getEndTime()
+                + ".";
+
+        if (leaveRequestHandleRequest.getResponseNote() != null && !leaveRequestHandleRequest.getResponseNote().isBlank()) {
+            message += " Ghi chú từ quản lý: " + leaveRequestHandleRequest.getResponseNote();
+        }
+
+        emailService.sendApprovalEmail(
+                leaveRequest.getEmployee().getEmail(),
+                message,
+                true
+        );
+
     }
 
     @Override

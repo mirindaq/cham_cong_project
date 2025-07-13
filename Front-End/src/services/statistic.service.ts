@@ -13,4 +13,29 @@ export const statisticApi = {
     const response = await http.get("/statistics/leave-overall");
     return response.data;
   },
+
+  getTopFiveStaffAttendanceByMonth: async (month: number, year: number) => {
+    const response = await http.get(
+      `/statistics/top-five-staff-attendance/${month}/${year}`
+    );
+    return response.data;
+  },
+
+  getOverallByMonth: async (month: number, year: number) => {
+    const response = await http.get(`/statistics/overall/${month}/${year}`);
+    return response.data;
+  },
+
+  getLeaveOverallStatisticsByMonth: async (month: number, year: number) => {
+    const response = await http.get(
+      `/statistics/leave-overall/${month}/${year}`
+    );
+    return response.data;
+  },
+  exportOverallByMonth: async (month: number, year: number) => {
+    const response = await http.get(`/statistics/export/${month}/${year}`, {
+      responseType: "blob",
+    });
+    return response.data;
+  },
 };

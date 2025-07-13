@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Camera, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -30,6 +30,7 @@ import {
   isSameMonth,
 } from "date-fns";
 import { attendanceApi } from "@/services/attendance.service";
+import { uploadApi } from "@/services/upload.service";
 import type { Location } from "@/types/location.type";
 import { locationApi } from "@/services/location.service";
 import type { WorkShift } from "@/types/workShiftAssignment.type";
@@ -59,6 +60,7 @@ interface AttendanceWorkShiftResponse {
   checkOut: string | null;
   attendanceId: number | null;
   locationName: string | null;
+  image: string | null;
   status: "PRESENT" | "LEAVE" | "LATE" | "ABSENT" | null;
 }
 
@@ -104,6 +106,12 @@ function EmployeeDashboard() {
   const [leaveBalances, setLeaveBalances] = useState<LeaveBalanceResponse[]>(
     []
   );
+  const [showCamera, setShowCamera] = useState(false);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const navigate = useNavigate();
 
@@ -185,6 +193,12 @@ function EmployeeDashboard() {
       return;
     }
 
+    // Kiểm tra xem đã chụp hình chưa
+    if (!capturedImage) {
+      setLocationError("Vui lòng chụp hình trước khi check-in");
+      return;
+    }
+
     try {
       const selectedLocation = locations.find(
         (loc) => loc.id === parseInt(selectedLocationId)
@@ -213,14 +227,32 @@ function EmployeeDashboard() {
           return;
         }
 
+        // Upload ảnh trước
+        setIsCapturing(true);
+        const imageFile = dataURLtoFile(capturedImage, `checkin_${Date.now()}.jpg`);
+        const formData = new FormData();
+        formData.append("file", imageFile);
+
+        const uploadResponse = await uploadApi.upload(formData);
+        if (uploadResponse.status !== 200) {
+          throw new Error("Lỗi khi upload ảnh");
+        }
+
+        // Lấy URL ảnh từ response
+        const imageUrl = uploadResponse.data.data; // API trả về URL ảnh
+
+        // Gọi API check-in với URL ảnh
         const response = await attendanceApi.checkIn({
           locationId: parseInt(selectedLocationId),
           latitude,
           longitude,
           workShiftId: selectedWorkShiftId,
+          file: imageUrl, // Thêm URL ảnh vào request
         });
 
         if (response.status === 200) {
+          // Xóa ảnh đã chụp sau khi check-in thành công
+          setCapturedImage(null);
           const month = currentMonth.getMonth() + 1;
           const year = currentMonth.getFullYear();
           const attendanceResponse =
@@ -234,10 +266,13 @@ function EmployeeDashboard() {
           err.response?.data?.message ||
           "Có lỗi xảy ra khi check-in. Vui lòng thử lại sau."
         );
+      } finally {
+        setIsCapturing(false);
       }
     } catch (error) {
       console.error("Lỗi khi check-in:", error);
       setLocationError("Có lỗi xảy ra khi check-in. Vui lòng thử lại sau.");
+      setIsCapturing(false);
     }
   };
 
@@ -392,6 +427,77 @@ function EmployeeDashboard() {
     fetchLeaveBalance();
   }, [user]);
 
+  // Cleanup camera khi component unmount
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
+  // Hàm khởi tạo camera
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        streamRef.current = stream;
+      }
+    } catch (error) {
+      console.error("Lỗi khi khởi tạo camera:", error);
+      setLocationError("Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.");
+    }
+  };
+
+  // Hàm dừng camera
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  // Hàm chụp hình
+  const captureImage = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d");
+
+      if (context) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0);
+        const imageDataUrl = canvas.toDataURL("image/jpeg");
+        setCapturedImage(imageDataUrl);
+        stopCamera();
+        setShowCamera(false);
+      }
+    }
+  };
+
+  // Hàm xóa ảnh đã chụp
+  const clearCapturedImage = () => {
+    setCapturedImage(null);
+  };
+
+  // Hàm chuyển đổi base64 thành file
+  const dataURLtoFile = (dataurl: string, filename: string): File => {
+    const arr = dataurl.split(",");
+    const mime = arr[0].match(/:(.*?);/)?.[1] || "image/jpeg";
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+  };
+
   if (isLoading) {
     return <Spinner layout="employee" />;
   }
@@ -505,14 +611,14 @@ function EmployeeDashboard() {
                           <div
                             key={idx}
                             className={`text-xs p-1 rounded border-l-2 ${shift.status === "PRESENT"
-                                ? "bg-green-50 border-green-500"
-                                : shift.status === "LATE"
-                                  ? "bg-yellow-50 border-yellow-500"
-                                  : shift.status === "ABSENT"
-                                    ? "bg-red-50 border-red-500"
-                                    : shift.status === "LEAVE"
-                                      ? "bg-blue-50 border-blue-500"
-                                      : "bg-gray-50 border-gray-500"
+                              ? "bg-green-50 border-green-500"
+                              : shift.status === "LATE"
+                                ? "bg-yellow-50 border-yellow-500"
+                                : shift.status === "ABSENT"
+                                  ? "bg-red-50 border-red-500"
+                                  : shift.status === "LEAVE"
+                                    ? "bg-blue-50 border-blue-500"
+                                    : "bg-gray-50 border-gray-500"
                               }`}
                           >
                             <div className="flex items-center justify-between mb-1">
@@ -672,6 +778,53 @@ function EmployeeDashboard() {
               </Select>
             </div>
 
+            {/* Phần chụp hình */}
+            <div className="space-y-2">
+              <Label>Chụp hình check-in</Label>
+              {!capturedImage ? (
+                <div className="space-y-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowCamera(true);
+                      startCamera();
+                    }}
+                    className="w-full"
+                    disabled={!selectedWorkShiftId}
+                  >
+                    <Camera className="w-4 h-4 mr-2" />
+                    Chụp hình
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Vui lòng chụp hình để xác nhận danh tính khi check-in
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <img
+                      src={capturedImage}
+                      alt="Ảnh check-in"
+                      className="w-full h-full object-cover rounded-md border"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={clearCapturedImage}
+                      className="absolute top-1 right-1"
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-green-600">
+                    ✓ Đã chụp hình thành công
+                  </p>
+                </div>
+              )}
+            </div>
+
             {(() => {
               const selectedShift = todayShifts.find(
                 (s) => s.workShifts.id === selectedWorkShiftId
@@ -705,6 +858,13 @@ function EmployeeDashboard() {
                               ?.split("T")[1]
                               .substring(0, 5)}
                           </p>
+                          <p className="mt-2">
+                            <img
+                              src={uncheckedOutShift.image || ""}
+                              alt="Ảnh check-in"
+                              className="w-3/5 h-full object-cover rounded-md border"
+                            />
+                          </p>
                         </div>
                       </AlertDescription>
                     </Alert>
@@ -727,9 +887,16 @@ function EmployeeDashboard() {
                   <Button
                     onClick={handleCheckIn}
                     className="w-full bg-green-600 hover:bg-green-700"
-                    disabled={!selectedWorkShiftId || !canCheckInNow}
+                    disabled={!selectedWorkShiftId || !canCheckInNow || isCapturing}
                   >
-                    Check In
+                    {isCapturing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Đang xử lý...
+                      </>
+                    ) : (
+                      "Check In"
+                    )}
                   </Button>
                 );
               }
@@ -766,7 +933,7 @@ function EmployeeDashboard() {
       </div>
 
       <Dialog open={showCheckoutModal} onOpenChange={setShowCheckoutModal}>
-        <DialogContent>
+        <DialogContent className="min-w-3xl">
           <DialogHeader>
             <DialogTitle>Thông tin chấm công</DialogTitle>
             <DialogDescription>
@@ -832,9 +999,62 @@ function EmployeeDashboard() {
                     </Badge>
                   </div>
                 </div>
+                <div className="flex">
+                  {selectedAttendance.image && (
+                    <img
+                      src={selectedAttendance.image}
+                      alt="Ảnh check-in"
+                      className="w-full h-full object-cover rounded-md border"
+                    />
+                  )}
+                </div>
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Camera */}
+      <Dialog open={showCamera} onOpenChange={setShowCamera}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Chụp hình check-in</DialogTitle>
+            <DialogDescription>
+              Vui lòng đặt khuôn mặt vào khung hình và nhấn chụp
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="relative">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className="w-full h-64 object-cover rounded-md border"
+              />
+              <canvas
+                ref={canvasRef}
+                className="hidden"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={captureImage}
+                className="flex-1"
+              >
+                <Camera className="w-4 h-4 mr-2" />
+                Chụp hình
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  stopCamera();
+                  setShowCamera(false);
+                }}
+              >
+                Hủy
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </EmployeeLayout>

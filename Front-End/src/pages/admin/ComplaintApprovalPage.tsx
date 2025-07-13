@@ -70,7 +70,7 @@ export default function ComplaintApprovalPage() {
   const [loading, setLoading] = useState<boolean>(false);
   const [complaints, setComplaints] = useState<ComplaintResponse[]>([]);
   const [departments, setDepartments] = useState<Department[]>();
-  const [shifts, setShifts] = useState<WorkShift[]>();
+  const [ , setShifts] = useState<WorkShift[]>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<any>(null);

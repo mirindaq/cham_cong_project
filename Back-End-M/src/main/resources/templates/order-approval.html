@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thông báo: Phiếu của bạn đã được duyệt</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #2c3e50;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+            opacity: 0.3;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #34495e;
+        }
+        
+        .description {
+            font-size: 16px;
+            margin-bottom: 30px;
+            color: #5a6c7d;
+            line-height: 1.7;
+        }
+        
+        .message-box {
+            background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);
+            border: 2px solid #4CAF50;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.15);
+        }
+        
+        .message-box::before {
+            content: '✓';
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #4CAF50;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .message-content {
+            font-size: 18px;
+            color: #2c3e50;
+            font-weight: 500;
+            line-height: 1.6;
+        }
+        
+        .footer-text {
+            font-size: 16px;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .footer {
+            background: #f8f9fa;
+            padding: 25px 30px;
+            text-align: center;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .footer p {
+            font-size: 13px;
+            color: #6c757d;
+            margin: 0;
+        }
+        
+        .company-info {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .company-info p {
+            font-size: 12px;
+            color: #adb5bd;
+            margin: 5px 0;
+        }
+        
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .email-container {
+                border-radius: 12px;
+            }
+            
+            .header {
+                padding: 30px 20px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="email-container">
+    <div class="header">
+        <h1>🎉 Phiếu đã được duyệt!</h1>
+        <div class="subtitle">Yêu cầu của bạn đã được chấp thuận</div>
+    </div>
+
+    <div class="content">
+        <p class="greeting">Xin chào,</p>
+
+        <p class="description">
+            Chúng tôi rất vui mừng thông báo rằng phiếu của bạn đã được duyệt thành công. 
+            Dưới đây là thông tin chi tiết về yêu cầu của bạn:
+        </p>
+
+        <div class="message-box">
+            <div class="message-content">
+                <span th:text="${messageContent}"></span>
+            </div>
+        </div>
+
+        <p class="footer-text">
+            Cảm ơn bạn đã tin tưởng và sử dụng dịch vụ của chúng tôi. 
+        </p>
+    </div>
+
+    <div class="footer">
+        <p>📧 Email này được gửi tự động, vui lòng không trả lời.</p>
+        <div class="company-info">
+            <p>© 2025 Hệ thống Chấm công. Tất cả quyền được bảo lưu.</p>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -20,8 +20,8 @@ export const authApi = {
     const response = await http.post("/auth/change-password-first-login", data);
     return response.data;
   },
-  logout: async (accessToken: string) => {
-    const response = await http.post("/auth/logout", { accessToken });
+  logout: async () => {
+    const response = await http.post("/auth/logout");
     return response.data;
   },
   refreshToken: async (refreshToken: string) => {

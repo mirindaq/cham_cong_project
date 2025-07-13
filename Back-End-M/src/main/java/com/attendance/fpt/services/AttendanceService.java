@@ -1,5 +1,6 @@
 package com.attendance.fpt.services;
 
+import com.attendance.fpt.model.request.AttendanceUpdateRequest;
 import com.attendance.fpt.model.request.CheckInRequest;
 import com.attendance.fpt.model.request.CheckOutRequest;
 import com.attendance.fpt.model.response.AttendanceWorkShiftResponse;
@@ -19,4 +20,7 @@ public interface AttendanceService {
     List<AttendanceWorkShiftResponse> getRecentCheckers();
 
 
+    AttendanceWorkShiftResponse updateAttendance(Long workShiftAssignmentId, AttendanceUpdateRequest attendanceUpdateRequest);
+
+    AttendanceWorkShiftResponse getAttendanceById(Long attendanceId);
 }

@@ -4,6 +4,7 @@ import com.attendance.fpt.model.request.*;
 import com.attendance.fpt.model.response.LoginResponse;
 import com.attendance.fpt.model.response.ResponseSuccess;
 import com.attendance.fpt.services.AuthenticationService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -50,16 +51,6 @@ public class AuthenticationController {
         ));
     }
 
-    @PostMapping("/forgot-password")
-    public ResponseEntity<ResponseSuccess<?>> resetPassword(@Valid @RequestBody ForgotPasswordRequest forgotPasswordRequest) {
-        authenticationService.resetPassword(forgotPasswordRequest);
-        return ResponseEntity.ok(new ResponseSuccess<>(
-                HttpStatus.OK,
-                "Reset password success",
-                null
-        ));
-    }
-
 
     @PostMapping("/refresh-token")
     public ResponseEntity<ResponseSuccess<LoginResponse>> refresh(@RequestBody RefreshTokenRequest refreshTokenRequest) {
@@ -72,8 +63,8 @@ public class AuthenticationController {
 
     @PostMapping("/logout")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ResponseSuccess<?>> logout(@RequestBody LogoutRequest logoutRequest) {
-        authenticationService.logout(logoutRequest.getAccessToken());
+    public ResponseEntity<ResponseSuccess<?>> logout(HttpServletRequest request) {
+        authenticationService.logout(request);
         return ResponseEntity.ok(new ResponseSuccess<>(
                 HttpStatus.OK,
                 "Logout Success",

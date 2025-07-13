@@ -86,7 +86,7 @@ public class WorkShiftController {
 
 
     @GetMapping("/active")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_EMPLOYEE')")
     public ResponseEntity<ResponseSuccess<List<WorkShiftResponse>>> getAllWorkShiftsActive() {
         return ResponseEntity.ok(new ResponseSuccess<>(
                 HttpStatus.OK,

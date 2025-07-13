@@ -12,7 +12,7 @@ export type UserResponse = {
   employeeType: string;
   active: boolean;
   leaveBalanceResponses: LeaveBalanceResponse[];
-  avatar: string;
+  avatar: string | null;
 };
 
 export type UserRequest = {

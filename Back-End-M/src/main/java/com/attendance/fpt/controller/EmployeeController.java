@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import javax.print.attribute.standard.Media;
 import java.util.List;
 
 @RestController
@@ -93,4 +94,5 @@ public class EmployeeController {
         return ResponseEntity.ok(new ResponseSuccess<>(HttpStatus.OK,
                 "Update avatar success", employeeService.updateAvatar(uploadRequest)));
     }
+
 }

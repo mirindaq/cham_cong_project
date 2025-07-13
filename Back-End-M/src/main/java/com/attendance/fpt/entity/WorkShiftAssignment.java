@@ -18,6 +18,8 @@ public class WorkShiftAssignment {
     private Long id;
     
     private LocalDate dateAssign;
+
+    private boolean locked;
     
     @ManyToOne
     @JoinColumn(name = "work_shift_id")
@@ -29,4 +31,9 @@ public class WorkShiftAssignment {
     
     @OneToOne(mappedBy = "workShiftAssignment")
     private Attendance attendance;
+
+    @PrePersist
+    protected void onCreate() {
+        this.locked = false;
+    }
 } 

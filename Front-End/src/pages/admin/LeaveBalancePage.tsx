@@ -1,4 +1,4 @@
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,7 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Plus, Edit, Trash, Calendar, Users, Search, X, Check } from "lucide-react";
+import { Plus, Edit, Calendar, Users, Search, X, Check } from "lucide-react";
 import {
   Select,
   SelectContent,

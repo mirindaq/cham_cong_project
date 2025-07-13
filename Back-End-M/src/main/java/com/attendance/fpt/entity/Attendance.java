@@ -24,7 +24,9 @@ public class Attendance {
     private Integer lateMinutes;
     private boolean edited;
     private String editedBy;
-    private boolean locked;
+    private LocalDateTime editedTime;
+
+    private String image;
     
     @ManyToOne
     @JoinColumn(name = "employee_id")

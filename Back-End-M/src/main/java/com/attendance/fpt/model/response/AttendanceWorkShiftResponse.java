@@ -19,5 +19,10 @@ public class AttendanceWorkShiftResponse {
     private Long attendanceId;
     private String locationName;
     private String status;
+    private String image;
+    private String editedBy;
+    private LocalDateTime editedTime;
+    private boolean edited;
+    private boolean locked;
 
 }

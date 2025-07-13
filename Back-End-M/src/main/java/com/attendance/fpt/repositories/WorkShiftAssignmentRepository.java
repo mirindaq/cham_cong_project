@@ -9,8 +9,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -67,6 +69,40 @@ public interface WorkShiftAssignmentRepository extends JpaRepository<WorkShiftAs
     );
 
     List<WorkShiftAssignment> findByEmployee_IdAndDateAssignBetweenAndWorkShift_IdAndAttendanceIsNull(Long employeeId, LocalDate startDate, LocalDate endDate, Long workShiftId);
+    @Query("SELECT wsa " +
+            "FROM WorkShiftAssignment wsa " +
+            "LEFT JOIN wsa.attendance a " +
+            "WHERE (:employeeName IS NULL OR LOWER(wsa.employee.fullName) LIKE LOWER(CONCAT('%', :employeeName, '%'))) " +
+            "AND (:date IS NULL OR wsa.dateAssign = :date) " +
+            "AND ( " +
+            "     (wsa.dateAssign < CURRENT_DATE) " +
+            "     OR " +
+            "     (wsa.dateAssign = CURRENT_DATE AND wsa.workShift.startTime <= CURRENT TIME) " +
+            ") " +
+            "AND (:status IS NULL OR a.status = :status ) ")
+    Page<WorkShiftAssignment> getAllWorkShiftAttendanceByFilter(@Param("employeeName") String employeeName,
+                                                                @Param("date") LocalDate date,
+                                                                @Param("status") AttendanceStatus status,
+                                                                Pageable pageable);
+
+    @Query("SELECT wsa " +
+            "FROM WorkShiftAssignment wsa " +
+            "LEFT JOIN wsa.attendance a " +
+            "WHERE (:employeeName IS NULL OR LOWER(wsa.employee.fullName) LIKE LOWER(CONCAT('%', :employeeName, '%'))) " +
+            "AND (:date IS NULL OR wsa.dateAssign = :date) " +
+            "AND ( " +
+            "     (wsa.dateAssign < CURRENT_DATE) " +
+            "     OR " +
+            "     (wsa.dateAssign = CURRENT_DATE AND wsa.workShift.startTime <= CURRENT TIME) " +
+            ") " +
+            "AND a.id IS NULL")
+    Page<WorkShiftAssignment> getAllWorkShiftAttendanceByFilterAndAbsent(@Param("employeeName") String employeeName,
+                                                                @Param("date") LocalDate date,
+                                                                Pageable pageable);
+
+    boolean existsByWorkShiftAndDateAssignAndEmployee(WorkShift workShift, LocalDate dateAssign, Employee employee);
+
+    Optional<WorkShiftAssignment> findByWorkShiftAndDateAssignAndEmployee(WorkShift workShift, LocalDate dateAssign, Employee employee);
 
     @Query("SELECT " +
             "  wsa.dateAssign AS date, " +
@@ -85,35 +121,104 @@ public interface WorkShiftAssignmentRepository extends JpaRepository<WorkShiftAs
     List<Object[]> getStatisticByDateAssignBetween(LocalDate startDate, LocalDate endDate);
 
 
+
+    @Query("""
+    SELECT 
+        e.id,
+        e.fullName,
+        d.name,
+        COUNT(wsa.id) AS totalWorkShiftAssignment,
+        COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) AS totalAttendanceWorkShift,
+        COUNT(CASE WHEN a.status = 'LATE' THEN 1 END) AS totalLateWorkShift,
+        COUNT(CASE WHEN a.status IS NULL THEN 1 END) AS totalAbsentWorkShift,
+        COUNT(CASE WHEN a.status = 'LEAVE' THEN 1 END) AS totalLeaveWorkShift,
+        SUM(CASE WHEN a.totalHours IS NOT NULL THEN a.totalHours ELSE 0 END) AS totalWorkingHours
+    FROM WorkShiftAssignment wsa
+    JOIN wsa.employee e
+    JOIN e.department d
+    LEFT JOIN wsa.attendance a
+    WHERE (wsa.dateAssign < CURRENT_DATE 
+           OR (wsa.dateAssign = CURRENT_DATE AND wsa.workShift.endTime < CURRENT_TIMESTAMP))
+      AND (EXTRACT(MONTH FROM wsa.dateAssign) = :month
+           AND EXTRACT(YEAR FROM wsa.dateAssign) = :year)
+    GROUP BY e.id, e.fullName, d.name
+    ORDER BY totalAttendanceWorkShift DESC
+    LIMIT 5
+""")
+    List<Object[]> getTopFiveStaffAttendance(@Param("month") int month, @Param("year") int year);
+
+    @Query("""
+    SELECT 
+        e.id,
+        e.fullName,
+        d.name,
+        COUNT(wsa.id) AS totalWorkShiftAssignment,
+        COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) AS totalAttendanceWorkShift,
+        COUNT(CASE WHEN a.status = 'LATE' THEN 1 END) AS totalLateWorkShift,
+        COUNT(CASE WHEN a.status IS NULL THEN 1 END) AS totalAbsentWorkShift,
+        COUNT(CASE WHEN a.status = 'LEAVE' THEN 1 END) AS totalLeaveWorkShift,
+        SUM(CASE WHEN a.totalHours IS NOT NULL THEN a.totalHours ELSE 0 END) AS totalWorkingHours
+    FROM WorkShiftAssignment wsa
+    JOIN wsa.employee e
+    JOIN e.department d
+    LEFT JOIN wsa.attendance a
+    WHERE (wsa.dateAssign < CURRENT_DATE 
+           OR (wsa.dateAssign = CURRENT_DATE AND wsa.workShift.endTime < CURRENT_TIMESTAMP))
+      AND (EXTRACT(MONTH FROM wsa.dateAssign) = :month
+           AND EXTRACT(YEAR FROM wsa.dateAssign) = :year)
+    GROUP BY e.id, e.fullName, d.name
+    ORDER BY totalAttendanceWorkShift DESC
+""")
+    List<Object[]> getTopStaffAttendance(@Param("month") int month, @Param("year") int year);
+
+    @Query("""
+        SELECT 
+            wsa.dateAssign,
+            COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END),
+            COUNT(CASE WHEN a.status IS NULL THEN 1 END),
+            COUNT(CASE WHEN a.status = 'LATE' THEN 1 END),
+            COUNT(CASE WHEN a.status = 'LEAVE' THEN 1 END),
+            COUNT(wsa.id)
+        FROM WorkShiftAssignment wsa
+        LEFT JOIN wsa.attendance a
+        WHERE (wsa.dateAssign < CURRENT_DATE 
+               OR (wsa.dateAssign = CURRENT_DATE AND wsa.workShift.endTime < CURRENT_TIMESTAMP))
+          AND EXTRACT(MONTH FROM wsa.dateAssign) = :month
+          AND EXTRACT(YEAR FROM wsa.dateAssign) = :year
+        GROUP BY wsa.dateAssign
+        ORDER BY wsa.dateAssign
+        """)
+    List<Object[]> getStatisticByWeekInMonth(@Param("month") int month, @Param("year") int year);
+
     @Query("SELECT wsa " +
             "FROM WorkShiftAssignment wsa " +
-            "LEFT JOIN wsa.attendance a " +
-            "WHERE (:employeeName IS NULL OR LOWER(wsa.employee.fullName) LIKE LOWER(CONCAT('%', :employeeName, '%'))) " +
-            "AND (:date IS NULL OR wsa.dateAssign = :date) " +
-            "AND ( " +
-            "     (wsa.dateAssign < CURRENT_DATE) " +
-            "     OR " +
-            "     (wsa.dateAssign = CURRENT_DATE AND wsa.workShift.endTime <= CURRENT TIME) " +
-            ") " +
-            "AND (:status IS NULL OR a.status = :status ) ")
-    Page<WorkShiftAssignment> getAllWorkShiftAttendanceByFilter(@Param("employeeName") String employeeName,
-                                                                @Param("date") LocalDate date,
-                                                                @Param("status") AttendanceStatus status,
-                                                                Pageable pageable);
+            "WHERE (:month IS NULL OR FUNCTION('MONTH', wsa.dateAssign) = :month) " +
+            "AND (:year IS NULL OR FUNCTION('YEAR', wsa.dateAssign) = :year) " +
+            "AND wsa.attendance IS NOT NULL")
+
+    List<WorkShiftAssignment> getAllWorkShiftAttendanceByMonthAndYear(@Param("month") int month,
+                                                                      @Param("year") int year);
+
 
     @Query("SELECT wsa " +
             "FROM WorkShiftAssignment wsa " +
             "LEFT JOIN wsa.attendance a " +
-            "WHERE (:employeeName IS NULL OR LOWER(wsa.employee.fullName) LIKE LOWER(CONCAT('%', :employeeName, '%'))) " +
-            "AND (:date IS NULL OR wsa.dateAssign = :date) " +
+            "WHERE (:month IS NULL OR FUNCTION('MONTH', wsa.dateAssign) = :month) " +
+            "AND (:year IS NULL OR FUNCTION('YEAR', wsa.dateAssign) = :year) " +
             "AND ( " +
             "     (wsa.dateAssign < CURRENT_DATE) " +
             "     OR " +
-            "     (wsa.dateAssign = CURRENT_DATE AND wsa.workShift.endTime <= CURRENT TIME) " +
+            "     (wsa.dateAssign = CURRENT_DATE AND wsa.workShift.startTime <= CURRENT TIME) " +
             ") " +
             "AND a.id IS NULL")
-    Page<WorkShiftAssignment> getAllWorkShiftAttendanceByFilterAndAbsent(@Param("employeeName") String employeeName,
-                                                                @Param("date") LocalDate date,
-                                                                Pageable pageable);
+    List<WorkShiftAssignment> getAllWorkShiftAttendanceAbsentByMonthAndYear(@Param("month") int month,
+                                                                            @Param("year") int year);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE WorkShiftAssignment wsa SET wsa.locked = true " +
+            "WHERE FUNCTION('MONTH', wsa.dateAssign) = :month " +
+            "AND FUNCTION('YEAR', wsa.dateAssign) = :year")
+    void lockAllWorkShiftAssignmentForMonthAndYear(@Param("month") int month,@Param("year") int year);
 
 }

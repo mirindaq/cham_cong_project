@@ -42,10 +42,21 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
             Pageable pageable);
 
 
-    @Query("SELECT lt.name as name, count(lq) as value FROM LeaveRequest lq " +
-            "JOIN lq.leaveType lt " +
-            " GROUP BY lt" )
+    @Query("SELECT lt.name as name, count( distinct lq) as value FROM Attendance a" +
+            " JOIN a.leaveRequest lq " +
+            " JOIN lq.leaveType lt " +
+            " GROUP BY lt " )
     List<Object[]> getLeaveOverallStatistics();
 
+
+    @Query("SELECT lt.name as name, count( distinct lq) as value FROM Attendance a" +
+            " JOIN a.leaveRequest lq " +
+            " JOIN lq.leaveType lt " +
+            "  WHERE (a.workShiftAssignment.dateAssign < CURRENT_DATE " +
+            "               OR (a.workShiftAssignment.dateAssign = CURRENT_DATE AND a.workShiftAssignment.workShift.endTime < CURRENT_TIMESTAMP))" +
+            "          AND EXTRACT(MONTH FROM a.workShiftAssignment.dateAssign) = :month" +
+            "          AND EXTRACT(YEAR FROM a.workShiftAssignment.dateAssign) = :year" +
+            " GROUP BY lt " )
+    List<Object[]> getLeaveOverallStatisticsByMonth(int month, int year);
 
 }

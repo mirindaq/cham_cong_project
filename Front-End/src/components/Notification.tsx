@@ -21,7 +21,7 @@ export default function Notification() {
   );
   const [isLoading, setIsLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoadingUnread, setIsLoadingUnread] = useState(false);
+  const [, setIsLoadingUnread] = useState(false);
   const [isMarkingRead, setIsMarkingRead] = useState(false);
 
   // Fetch notifications

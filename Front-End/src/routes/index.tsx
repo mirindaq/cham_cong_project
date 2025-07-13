@@ -8,7 +8,6 @@ import AdminDashboard from "../pages/admin/AdminDashboard";
 import NotFoundPage from "../pages/NotFoundPage";
 import LocationsPage from "../pages/admin/LocationsPage";
 import ReportsPage from "../pages/admin/ReportsPage";
-import ApprovalsPage from "../pages/admin/ApprovalsPage";
 import DisputePage from "../pages/admin/DisputePage";
 import DepartmentsPage from "../pages/admin/DepartmentsPage";
 import ShiffAssignment from "../pages/admin/ShiffAssignment";
@@ -24,6 +23,11 @@ import LeaveRequestApprovalPage from "@/pages/admin/LeaveRequestApprovalPage";
 import ComplaintApprovalPage from "@/pages/admin/ComplaintApprovalPage";
 import PartTimeRequestApprovalPage from "@/pages/admin/PartTimeRequestApprovalPage";
 import RevertLeaveRequestApprovalPage from "@/pages/admin/RevertLeaveRequestApprovalPage";
+import ShiftChangeRequests from "@/pages/employee/ShiftChangeRequests";
+import ShiftChangeRequestApprovalPage from "@/pages/admin/ShiftChangeRequestApprovalPage";
+import AdminNews from "@/pages/admin/AdminNews";
+import News from "@/pages/employee/News";
+import NewsDetail from "@/pages/employee/NewsDetail";
 
 export const routes = [
   {
@@ -102,6 +106,30 @@ export const routes = [
           </ProtectedRoute>
         ),
       },
+      {
+        path: "shift-change-requests",
+        element: (
+          <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
+            <ShiftChangeRequests />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "news",
+        element: (
+          <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
+            <News />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "news/:slug",
+        element: (
+          <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
+            <NewsDetail />
+          </ProtectedRoute>
+        ),
+      },
     ],
   },
   // Admin routes
@@ -156,14 +184,14 @@ export const routes = [
           </ProtectedRoute>
         ),
       },
-      // {
-      //   path: "approvals",
-      //   element: (
-      //     <ProtectedRoute allowedRoles={["ADMIN"]}>
-      //       <ApprovalsPage />
-      //     </ProtectedRoute>
-      //   ),
-      // },
+      {
+        path: "news",
+        element: (
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <AdminNews />
+          </ProtectedRoute>
+        ),
+      },
       {
         path: "complaint-approvals",
         element: (
@@ -196,6 +224,15 @@ export const routes = [
           </ProtectedRoute>
         ),
       },
+      {
+        path: "shift-change-approvals",
+        element: (
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <ShiftChangeRequestApprovalPage />
+          </ProtectedRoute>
+        ),
+      },
+
       {
         path: "shiff-assignment",
         element: (

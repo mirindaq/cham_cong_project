@@ -1,16 +1,22 @@
+import type { AttendanceUpdateRequest } from "@/types/attendance.type";
 import http from "@/utils/http";
 
+interface CheckInRequest {
+  locationId: number;
+  latitude: number;
+  longitude: number;
+  workShiftId: number;
+  file: string;
+}
+
 export const attendanceApi = {
-  getAttendanceByEmployee: async (
-    month: number,
-    year: number
-  ) => {
+  getAttendanceByEmployee: async (month: number, year: number) => {
     const response = await http.get(
       `/attendances/employee?month=${month}&year=${year}`
     );
     return response.data;
   },
-  checkIn: async (checkInData: any) => {
+  checkIn: async (checkInData: CheckInRequest) => {
     const response = await http.post("/attendances/check-in", checkInData);
     return response.data;
   },
@@ -24,6 +30,10 @@ export const attendanceApi = {
   },
   getRecentAttendances: async () => {
     const response = await http.get("/attendances/recent-checker");
+    return response.data;
+  },
+  updateAttendance: async (id: number, data: AttendanceUpdateRequest) => {
+    const response = await http.put(`/attendances/update/${id}`, data);
     return response.data;
   },
 };

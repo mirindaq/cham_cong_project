@@ -28,7 +28,7 @@ import {
   isAfter,
 } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Delete, Edit, Plus, Trash, Trash2, X } from "lucide-react";
+import { Check, Plus, Trash, Trash2, X } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -76,13 +76,13 @@ export default function ShiffAssignment() {
   const [newShift, setNewShift] = useState<WorkShiftAddRequest>({
     name: "",
     startTime: "",
-    endTime: "",  
+    endTime: "",
     partTime: false,
     active: true,
   });
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCalendarLoading, setIsCalendarLoading] = useState(false);
+  const [_, setIsCalendarLoading] = useState(false);
   // State cho phân công
   const [selectedShiftIds, setSelectedShiftIds] = useState<number[]>([]);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<number[]>([]);
@@ -216,25 +216,42 @@ export default function ShiffAssignment() {
       }
     }
 
-    const assigned = await shiftAssignmentApi.assignShifts(assignments);
-    if (assigned) {
-      setAssignments((prev) => [...prev, ...assigned]);
-      toast.success("Phân công ca làm việc thành công!");
+    try {
+      const assigned = await shiftAssignmentApi.assignShifts(assignments);
+      if (assigned) {
+        setAssignments((prev) => [...prev, ...assigned]);
+        toast.success("Phân công ca làm việc thành công!");
+      }
+    } catch (error: any) {
+      if (error.message === "Cannot assign work shift in the past") {
+        toast.error("Không thể phân công ca làm việc trong quá khứ!");
+      } else {
+        toast.error("Không thể phân công ca làm việc. Vui lòng thử lại sau.");
+      }
+    } finally {
+      setShowAssignDialog(false);
+      setSelectedDateRange({ from: undefined, to: undefined });
+      setSelectedShiftIds([]);
+      setSelectedEmployeeIds([]);
     }
 
-    setShowAssignDialog(false);
-    setSelectedDateRange({ from: undefined, to: undefined });
-    setSelectedShiftIds([]);
-    setSelectedEmployeeIds([]);
   };
 
   const handleDeleteAssignment = async (
     assignmentId: number,
     employeeId: number
   ) => {
-    await shiftAssignmentApi.deleteAssignment(assignmentId, employeeId);
-    setAssignments((prev) => prev.filter((a) => a.id !== assignmentId));
-    toast.success("Xóa phân công thành công!");
+    try {
+      await shiftAssignmentApi.deleteAssignment(assignmentId, employeeId);
+      setAssignments((prev) => prev.filter((a) => a.id !== assignmentId));
+      toast.success("Xóa phân công thành công!");
+    } catch (error: any) {
+      if (error.message === "Cannot delete past assignments") {
+        toast.error("Không thể xóa phân công trong quá khứ!");
+      } else {
+        toast.error("Không thể xóa phân công. Vui lòng thử lại sau.");
+      }
+    }
   };
 
   const handleDeleteShift = (shiftId: number) => {
@@ -281,7 +298,7 @@ export default function ShiffAssignment() {
             shift.id === shiftId ? { ...shift, active: !shift.active } : shift
           )
         );
-        
+
         setActiveShifts((prev) => {
           if (response.active) {
             const shiftToAdd = shifts.find((shift) => shift.id === shiftId);
@@ -292,8 +309,7 @@ export default function ShiffAssignment() {
         });
 
         toast.success(
-          `Đã ${
-            response.active ? "kích hoạt" : "vô hiệu hóa"
+          `Đã ${response.active ? "kích hoạt" : "vô hiệu hóa"
           } ca làm việc thành công!`
         );
       }
@@ -368,13 +384,11 @@ export default function ShiffAssignment() {
             return (
               <div
                 key={day.toString()}
-                className={`min-h-[100px] p-2 border rounded-lg ${
-                  isToday(day) ? "bg-primary/5" : ""
-                } ${
-                  !isSameMonth(day, currentMonth)
+                className={`min-h-[100px] p-2 border rounded-lg ${isToday(day) ? "bg-primary/5" : ""
+                  } ${!isSameMonth(day, currentMonth)
                     ? "text-muted-foreground opacity-50"
                     : ""
-                }`}
+                  }`}
               >
                 <div className="font-medium mb-1">{format(day, "d")}</div>
                 <div className="space-y-1">
@@ -407,10 +421,20 @@ export default function ShiffAssignment() {
                           }
                           className="h-4 w-4 hover:bg-destructive/10"
                         >
-                          {isAfter(
+                          {(isAfter(
                             new Date(assignment.dateAssign),
                             new Date()
-                          ) &&
+                          ) ||
+                            (isSameDay(
+                              new Date(assignment.dateAssign),
+                              new Date()
+                            ) &&
+                              isAfter(
+                                new Date(
+                                  `${format(new Date(), "yyyy-MM-dd")}T${assignment.workShift.startTime}`
+                                ),
+                                new Date()
+                              ))) &&
                             !assignment.attendanceId && (
                               <Trash2 className="h-3 w-3 text-destructive" />
                             )}
@@ -839,10 +863,20 @@ export default function ShiffAssignment() {
                               {assignment.workShift.endTime}
                             </TableCell>
                             <TableCell className="text-right">
-                              {isAfter(
+                              {(isAfter(
                                 new Date(assignment.dateAssign),
                                 new Date()
-                              ) &&
+                              ) ||
+                                (isSameDay(
+                                  new Date(assignment.dateAssign),
+                                  new Date()
+                                ) &&
+                                  isAfter(
+                                    new Date(
+                                      `${format(new Date(), "yyyy-MM-dd")}T${assignment.workShift.startTime}`
+                                    ),
+                                    new Date()
+                                  ))) &&
                                 !assignment.attendanceId && (
                                   <Button
                                     variant="ghost"

@@ -9,7 +9,6 @@ import com.attendance.fpt.enums.TokenType;
 import com.attendance.fpt.exceptions.custom.ResourceNotFoundException;
 import com.attendance.fpt.model.request.ChangePasswordFirstLoginRequest;
 import com.attendance.fpt.model.request.ChangePasswordRequest;
-import com.attendance.fpt.model.request.ForgotPasswordRequest;
 import com.attendance.fpt.model.request.LoginRequest;
 import com.attendance.fpt.model.response.EmployeeResponse;
 import com.attendance.fpt.model.response.LoginResponse;
@@ -17,9 +16,10 @@ import com.attendance.fpt.repositories.AccountRepository;
 import com.attendance.fpt.repositories.EmployeeRepository;
 import com.attendance.fpt.services.AuthenticationService;
 import com.attendance.fpt.services.EmailService;
-import com.attendance.fpt.utils.PasswordGenerator;
 import com.attendance.fpt.utils.SecurityUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -70,27 +70,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return LoginResponseConverter.toResponse(token,refreshToken, account.getUsername(), account.getRole().name());
     }
 
-    @Override
-    @Transactional
-    public void resetPassword(ForgotPasswordRequest forgotPasswordRequest) {
-        Employee employee = employeeRepository.findByEmail(forgotPasswordRequest.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("Email not found"));
-
-        if (!employee.isActive()) {
-            throw new IllegalArgumentException("Account is locked");
-        }
-
-        Account account = employee.getAccount();
-        if (account == null) {
-            throw new IllegalArgumentException("Account not found for employee");
-        }
-
-        String newPassword = PasswordGenerator.generateRandomPassword();
-        account.setPassword(passwordEncoder.encode(newPassword));
-        accountRepository.save(account);
-
-        emailService.sendNewPassword(forgotPasswordRequest.getEmail(), newPassword);
-    }
 
     @Override
     public void changePassword(ChangePasswordRequest changePasswordRequest) {
@@ -156,7 +135,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
-    public void logout(String accessToken) {
+    public void logout(HttpServletRequest request) {
+        String authorizationHeader = request.getHeader("Authorization");
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            throw new AccessDeniedException("Authorization header is missing or invalid");
+        }
+        String accessToken = authorizationHeader.substring(7);
+
         if (!jwtUtil.validateJwtToken(accessToken, TokenType.ACCESS_TOKEN)) {
             throw new IllegalArgumentException("Invalid or expired access token");
         }

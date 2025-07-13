@@ -38,6 +38,11 @@ public class AttendanceWorkShiftConverter {
                 .status(status)
                 .attendanceId(null)
                 .locationName(null)
+                .image(null)
+                .editedBy( null)
+                .editedTime(null)
+                .edited(false)
+                .locked(false)
                 .build();
     }
 
@@ -50,6 +55,11 @@ public class AttendanceWorkShiftConverter {
                 .status(attendance.getStatus().name())
                 .attendanceId(attendance.getId())
                 .locationName( attendance.getLocation() != null ? attendance.getLocation().getName() : null)
+                .image(attendance.getImage() != null ? attendance.getImage() : null)
+                .editedBy(attendance.getEditedBy() != null ? attendance.getEditedBy() : null)
+                .editedTime(attendance.getEditedTime() != null ? attendance.getEditedTime() : null)
+                .edited(attendance.isEdited())
+                .locked(workShiftAssignment.isLocked())
                 .build();
     }
 }

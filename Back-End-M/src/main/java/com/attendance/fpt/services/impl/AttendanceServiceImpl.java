@@ -1,13 +1,11 @@
 package com.attendance.fpt.services.impl;
 
 import com.attendance.fpt.converter.AttendanceWorkShiftConverter;
-import com.attendance.fpt.entity.Attendance;
-import com.attendance.fpt.entity.Employee;
-import com.attendance.fpt.entity.Location;
-import com.attendance.fpt.entity.WorkShiftAssignment;
+import com.attendance.fpt.entity.*;
 import com.attendance.fpt.enums.AttendanceStatus;
 import com.attendance.fpt.exceptions.custom.ConflictException;
 import com.attendance.fpt.exceptions.custom.ResourceNotFoundException;
+import com.attendance.fpt.model.request.AttendanceUpdateRequest;
 import com.attendance.fpt.model.request.CheckInRequest;
 import com.attendance.fpt.model.request.CheckOutRequest;
 import com.attendance.fpt.model.response.AttendanceWorkShiftResponse;
@@ -17,6 +15,7 @@ import com.attendance.fpt.repositories.EmployeeRepository;
 import com.attendance.fpt.repositories.LocationRepository;
 import com.attendance.fpt.repositories.WorkShiftAssignmentRepository;
 import com.attendance.fpt.services.AttendanceService;
+import com.attendance.fpt.services.UploadService;
 import com.attendance.fpt.utils.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -26,6 +25,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -41,6 +41,7 @@ public class AttendanceServiceImpl implements AttendanceService {
     private final EmployeeRepository employeeRepository;
     private final LocationRepository locationRepository;
     private final SecurityUtil securityUtil;
+    private final UploadService uploadService;
 
     @Override
     public List<AttendanceWorkShiftResponse> getAttendanceAndShiftAssignmentByEmployee(Long month, Long year) {
@@ -128,7 +129,10 @@ public class AttendanceServiceImpl implements AttendanceService {
             }
         }
 
-        // Tạo bản ghi chấm công mới
+        if (request.getFile() == null || request.getFile().isEmpty()) {
+            throw new IllegalArgumentException("Image file is required for check-in");
+        }
+
         Attendance attendance = Attendance.builder()
                 .checkInTime(now)
                 .checkOutTime(null)
@@ -136,11 +140,11 @@ public class AttendanceServiceImpl implements AttendanceService {
                 .status(status)
                 .lateMinutes(lateMinutes)
                 .edited(false)
-                .locked(false)
                 .employee(employee)
                 .location(location)
                 .workShiftAssignment(currentShift)
                 .location(location)
+                .image(request.getFile())
                 .build();
 
         return AttendanceWorkShiftConverter.toResponseHaveAttendance(attendance.getWorkShiftAssignment(), attendanceRepository.save(attendance));
@@ -224,6 +228,99 @@ public class AttendanceServiceImpl implements AttendanceService {
                     .toList();
         }
         return List.of();
+    }
+
+    private Attendance createAttendanceForUpdate( WorkShiftAssignment workShiftAssignment ){
+        Attendance attendance = Attendance.builder()
+                .employee(workShiftAssignment.getEmployee())
+                .workShiftAssignment(workShiftAssignment)
+                .build();
+
+        workShiftAssignment.setAttendance(attendance);
+        workShiftAssignmentRepository.save(workShiftAssignment);
+        return attendanceRepository.save(attendance );
+    }
+
+    @Override
+    @Transactional
+    public AttendanceWorkShiftResponse updateAttendance(Long workShiftAssignmentId, AttendanceUpdateRequest attendanceUpdateRequest) {
+        Employee employee = securityUtil.getCurrentUser();
+
+        WorkShiftAssignment workShiftAssignment = workShiftAssignmentRepository.findById(workShiftAssignmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Work shift assignment not found"));
+
+        Attendance attendance = workShiftAssignment.getAttendance() != null ? workShiftAssignment.getAttendance() :
+                createAttendanceForUpdate(workShiftAssignment);
+
+        if ( workShiftAssignment.isLocked() ) {
+            throw new IllegalArgumentException("Attendance record is locked and cannot be edited");
+        }
+
+        if (workShiftAssignment.getDateAssign().isBefore(LocalDate.now().minusDays(5))) {
+            throw new IllegalArgumentException("Cannot edit attendance record for dates older than 5 days.");
+        }
+
+        if (attendanceUpdateRequest.getCheckInTime() != null) {
+            LocalDate dateAssign = attendance.getWorkShiftAssignment().getDateAssign();
+            LocalTime checkInTime = attendanceUpdateRequest.getCheckInTime();
+            LocalDateTime checkInDateTime = dateAssign.atTime(checkInTime);
+            attendance.setCheckInTime(checkInDateTime);
+        }
+
+        if (attendanceUpdateRequest.getCheckOutTime() != null) {
+            LocalDate dateAssign = attendance.getWorkShiftAssignment().getDateAssign();
+            LocalTime checkOutTime = attendanceUpdateRequest.getCheckOutTime();
+            LocalDateTime checkOutDateTime = dateAssign.atTime(checkOutTime);
+            attendance.setCheckOutTime(checkOutDateTime);
+        }
+
+        if (attendance.getCheckInTime() != null && attendance.getCheckOutTime() != null) {
+            if (attendance.getCheckOutTime().isBefore(attendance.getCheckInTime())) {
+                throw new IllegalArgumentException("Check-out time must be after check-in time.");
+            }
+
+            Duration duration = Duration.between(attendance.getCheckInTime(), attendance.getCheckOutTime());
+            double hours = duration.toMinutes() / 60.0;
+            attendance.setTotalHours(hours);
+        }
+
+        // tinh so phut di tre
+        if (attendance.getCheckInTime() != null) {
+            WorkShift workShift = attendance.getWorkShiftAssignment().getWorkShift();
+            LocalDateTime officialStartDateTime = workShift.getStartTime().atDate(attendance.getCheckInTime().toLocalDate()); // Set the date of the attendance check-in time
+            LocalDateTime lateThresholdDateTime = officialStartDateTime.plusMinutes(15);
+            LocalDateTime actualCheckInDateTime = attendance.getCheckInTime();
+
+            // Check if actualCheckInDateTime is after lateThresholdDateTime
+            if (actualCheckInDateTime.isAfter(lateThresholdDateTime)) {
+                long lateMinutes = Duration.between(lateThresholdDateTime, actualCheckInDateTime).toMinutes();
+                attendance.setLateMinutes((int) lateMinutes);
+                attendance.setStatus(AttendanceStatus.LATE);
+            } else {
+                attendance.setLateMinutes(0);
+                attendance.setStatus(AttendanceStatus.PRESENT);
+            }
+        }
+
+
+        attendance.setImage(attendanceUpdateRequest.getFile());
+        attendance.setEdited(true);
+        attendance.setEditedBy(employee.getFullName());
+        attendance.setEditedTime(LocalDateTime.now());
+
+        Location location = locationRepository.findByName(attendanceUpdateRequest.getLocationName())
+                .orElseThrow(() -> new ResourceNotFoundException("Location not found"));
+        attendance.setLocation(location);
+
+        return AttendanceWorkShiftConverter.toResponseHaveAttendance(attendance.getWorkShiftAssignment(), attendanceRepository.save(attendance));
+    }
+
+    @Override
+    public AttendanceWorkShiftResponse getAttendanceById(Long attendanceId) {
+        Attendance attendance = attendanceRepository.findById(attendanceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Attendance not found"));
+
+        return AttendanceWorkShiftConverter.toResponseHaveAttendance(attendance.getWorkShiftAssignment(), attendance);
     }
 
     private Integer calculateLateMinutes(LocalTime checkInTime, LocalTime shiftStartTime) {

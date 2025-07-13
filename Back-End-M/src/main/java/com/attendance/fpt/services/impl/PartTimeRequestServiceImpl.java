@@ -12,6 +12,7 @@ import com.attendance.fpt.model.request.PartTimeRequestHandleRequest;
 import com.attendance.fpt.model.response.PartTimeRequestResponse;
 import com.attendance.fpt.model.response.ResponseWithPagination;
 import com.attendance.fpt.repositories.*;
+import com.attendance.fpt.services.EmailService;
 import com.attendance.fpt.services.NotificationService;
 import com.attendance.fpt.services.PartTimeRequestService;
 import com.attendance.fpt.utils.SecurityUtil;
@@ -35,6 +36,7 @@ public class PartTimeRequestServiceImpl implements PartTimeRequestService {
     private final SecurityUtil securityUtil;
     private final PartTimeRequestRepository partTimeRequestRepository;
     private final NotificationService notificationService;
+    private final EmailService emailService;
     @Override
     public ResponseWithPagination<List<PartTimeRequestResponse>> getAllPartTimeRequests(
             int page,
@@ -173,6 +175,22 @@ public class PartTimeRequestServiceImpl implements PartTimeRequestService {
         partTimeRequestRepository.save(partTimeRequest);
 
         notificationService.sendNotification(partTimeRequest.getEmployee(), "Đơn xin làm thêm giờ của bạn ngày " + partTimeRequest.getDate() + " đã được phê duyệt");
+
+        String message = "Đơn xin làm thêm giờ vào ngày " + partTimeRequest.getDate() + " của bạn đã được phê duyệt."
+                + "Bạn sẽ làm việc theo ca từ "
+                + partTimeRequest.getWorkShift().getStartTime()
+                + " đến " + partTimeRequest.getWorkShift().getEndTime() + ".";
+
+        if (partTimeRequestHandleRequest.getResponseNote() != null && !partTimeRequestHandleRequest.getResponseNote().isBlank()) {
+            message += " Ghi chú từ quản lý: " + partTimeRequestHandleRequest.getResponseNote();
+        }
+
+        emailService.sendApprovalEmail(
+                partTimeRequest.getEmployee().getEmail(),
+                message,
+                true
+        );
+
     }
 
     @Override
@@ -193,5 +211,18 @@ public class PartTimeRequestServiceImpl implements PartTimeRequestService {
         partTimeRequestRepository.save(partTimeRequest);
 
         notificationService.sendNotification(partTimeRequest.getEmployee(), "Đơn xin làm thêm giờ của bạn ngày " + partTimeRequest.getDate() + " đã bị từ chối");
+
+        String message = "Đơn xin làm thêm giờ vào ngày " + partTimeRequest.getDate() + " của bạn đã bị từ chối.";
+
+        if (partTimeRequestHandleRequest.getResponseNote() != null && !partTimeRequestHandleRequest.getResponseNote().isBlank()) {
+            message += " Lý do: " + partTimeRequestHandleRequest.getResponseNote();
+        }
+
+        emailService.sendApprovalEmail(
+                partTimeRequest.getEmployee().getEmail(),
+                message,
+                false
+        );
+
     }
 }

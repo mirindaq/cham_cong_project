@@ -1,5 +1,7 @@
 package com.attendance.fpt.services;
 
 public interface EmailService {
-    void sendNewPassword(String to, String newPassword);
+    void sendOtp(String to, String otp);
+
+    void sendApprovalEmail(String to, String message, boolean isApproved);
 }

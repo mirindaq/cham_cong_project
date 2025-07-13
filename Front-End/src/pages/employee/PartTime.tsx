@@ -77,7 +77,7 @@ function PartTime() {
   const [loading, setLoading] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPage, setTotalPage] = useState<number>(1);
-  const [totalItem, setTotalItem] = useState<number>(0);
+  const [, setTotalItem] = useState<number>(0);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDetail, setSelectedDetail] =
     useState<PartTimeRequestResponse | null>(null);

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -19,6 +19,10 @@ import {
   Home,
   CheckCircle,
   FileText,
+  Newspaper,
+  AlertTriangle,
+  Clock,
+  ClipboardList,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Notification from "@/components/Notification";
@@ -48,13 +52,27 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
     {
       name: "Đơn khiếu nại chấm công",
       href: "/employee/disputes",
-      icon: FileText,
+      icon: AlertTriangle,
     },
-    ...(user?.employeeType === "PART_TIME" ? [{
-      name: "Đơn đăng ký làm part-time",
-      href: "/employee/part-time",
-      icon: FileText,
-    }] : []),
+    ...(user?.employeeType === "PART_TIME"
+      ? [
+          {
+            name: "Đơn đăng ký làm part-time",
+            href: "/employee/part-time",
+            icon: ClipboardList,
+          },
+        ]
+      : []),
+    {
+      name: "Đơn xin đổi ca làm",
+      href: "/employee/shift-change-requests",
+      icon: Clock,
+    },
+    {
+      name: "Tin tức",
+      href: "/employee/news",
+      icon: Newspaper,
+    },
     { name: "Hồ sơ cá nhân", href: "/employee/profile", icon: User },
   ];
 
@@ -80,10 +98,11 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
                     <Link
                       key={item.name}
                       to={item.href}
-                      className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${isActive(item.href)
+                      className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
+                        isActive(item.href)
                           ? "bg-primary text-primary-foreground"
                           : "hover:bg-muted"
-                        }`}
+                      }`}
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <item.icon className="h-5 w-5" />
@@ -105,7 +124,9 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Avatar className="h-10 w-10 transition-opacity group-hover:opacity-80">
                     <AvatarImage
-                      src={user?.avatar || "/placeholder.svg?height=80&width=80"}
+                      src={
+                        user?.avatar || "/placeholder.svg?height=80&width=80"
+                      }
                       alt={user?.fullName}
                     />
                     <AvatarFallback>
@@ -150,10 +171,11 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${isActive(item.href)
+                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
+                  isActive(item.href)
                     ? "bg-primary text-primary-foreground"
                     : "hover:bg-muted"
-                  }`}
+                }`}
               >
                 <item.icon className="h-5 w-5" />
                 {item.name}

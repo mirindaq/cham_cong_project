@@ -20,16 +20,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AdminLayout } from "@/components/admin-layout";
-import { Plus, Edit, Trash, MapPin } from "lucide-react";
+import { Plus, Edit, Trash, MapPin, Map } from "lucide-react";
 import type { Location } from "@/types/location.type";
 import { locationApi } from "@/services/location.service";
 import { toast } from "sonner";
 import Spinner from "@/components/Spinner";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
+import LocationMap from "@/components/LocationMap";
 
 export default function LocationsPage() {
   const [showAddLocationDialog, setShowAddLocationDialog] = useState(false);
   const [showEditLocationDialog, setShowEditLocationDialog] = useState(false);
+  const [showMapDialog, setShowMapDialog] = useState(false);
   const [editLocationId, setEditLocationId] = useState<number | null>(null);
   const [newLocationData, setNewLocationData] = useState({
     name: "",
@@ -52,6 +54,11 @@ export default function LocationsPage() {
     locationId: null,
     locationName: "",
   });
+
+  // State cho bản đồ
+  const [mapLatitude, setMapLatitude] = useState(10.8231); // Mặc định là TP.HCM
+  const [mapLongitude, setMapLongitude] = useState(106.6297);
+  const [, setIsMapMode] = useState(false);
 
   useEffect(() => {
     const fetchLocations = async () => {
@@ -141,6 +148,9 @@ export default function LocationsPage() {
       active: true,
     });
     setEditLocationId(null);
+    setMapLatitude(10.8231);
+    setMapLongitude(106.6297);
+    setIsMapMode(false);
   };
 
   const openEditDialog = (id: number) => {
@@ -155,6 +165,8 @@ export default function LocationsPage() {
         radius: locationToEdit.radius.toString(),
         active: locationToEdit.active,
       });
+      setMapLatitude(locationToEdit.latitude);
+      setMapLongitude(locationToEdit.longitude);
       setEditLocationId(id);
       setShowEditLocationDialog(true);
     }
@@ -163,6 +175,34 @@ export default function LocationsPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setNewLocationData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleMapLocationChange = (lat: number, lng: number) => {
+    setMapLatitude(lat);
+    setMapLongitude(lng);
+    setNewLocationData((prev) => ({
+      ...prev,
+      latitude: lat.toString(),
+      longitude: lng.toString(),
+    }));
+  };
+
+  const openMapDialog = () => {
+    // Khởi tạo vị trí bản đồ từ form hiện tại hoặc vị trí mặc định
+    const currentLat = parseFloat(newLocationData.latitude) || 10.8231;
+    const currentLng = parseFloat(newLocationData.longitude) || 106.6297;
+    setMapLatitude(currentLat);
+    setMapLongitude(currentLng);
+    setShowMapDialog(true);
+  };
+
+  const confirmMapLocation = () => {
+    setNewLocationData((prev) => ({
+      ...prev,
+      latitude: mapLatitude.toString(),
+      longitude: mapLongitude.toString(),
+    }));
+    setShowMapDialog(false);
   };
 
   if (loading) {
@@ -313,33 +353,57 @@ export default function LocationsPage() {
                 <Label htmlFor="latitude" className="text-right">
                   Vĩ độ
                 </Label>
-                <Input
-                  id="latitude"
-                  name="latitude"
-                  type="number"
-                  step="any"
-                  className="col-span-3"
-                  placeholder="VD: 12.345678"
-                  value={newLocationData.latitude}
-                  onChange={handleInputChange}
-                  required
-                />
+                <div className="col-span-3 flex gap-2">
+                  <Input
+                    id="latitude"
+                    name="latitude"
+                    type="number"
+                    step="any"
+                    className="flex-1"
+                    placeholder="VD: 12.345678"
+                    value={newLocationData.latitude}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={openMapDialog}
+                    className="flex items-center gap-1"
+                  >
+                    <Map className="h-4 w-4" />
+                    Chọn
+                  </Button>
+                </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="longitude" className="text-right">
                   Kinh độ
                 </Label>
-                <Input
-                  id="longitude"
-                  name="longitude"
-                  type="number"
-                  step="any"
-                  className="col-span-3"
-                  placeholder="VD: 98.765432"
-                  value={newLocationData.longitude}
-                  onChange={handleInputChange}
-                  required
-                />
+                <div className="col-span-3 flex gap-2">
+                  <Input
+                    id="longitude"
+                    name="longitude"
+                    type="number"
+                    step="any"
+                    className="flex-1"
+                    placeholder="VD: 98.765432"
+                    value={newLocationData.longitude}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={openMapDialog}
+                    className="flex items-center gap-1"
+                  >
+                    <Map className="h-4 w-4" />
+                    Chọn
+                  </Button>
+                </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="radius" className="text-right">
@@ -454,33 +518,57 @@ export default function LocationsPage() {
                 <Label htmlFor="edit-latitude" className="text-right">
                   Vĩ độ
                 </Label>
-                <Input
-                  id="edit-latitude"
-                  name="latitude"
-                  type="number"
-                  step="any"
-                  className="col-span-3"
-                  placeholder="VD: 12.345678"
-                  value={newLocationData.latitude}
-                  onChange={handleInputChange}
-                  required
-                />
+                <div className="col-span-3 flex gap-2">
+                  <Input
+                    id="edit-latitude"
+                    name="latitude"
+                    type="number"
+                    step="any"
+                    className="flex-1"
+                    placeholder="VD: 12.345678"
+                    value={newLocationData.latitude}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={openMapDialog}
+                    className="flex items-center gap-1"
+                  >
+                    <Map className="h-4 w-4" />
+                    Chọn
+                  </Button>
+                </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-longitude" className="text-right">
                   Kinh độ
                 </Label>
-                <Input
-                  id="edit-longitude"
-                  name="longitude"
-                  type="number"
-                  step="any"
-                  className="col-span-3"
-                  placeholder="VD: 98.765432"
-                  value={newLocationData.longitude}
-                  onChange={handleInputChange}
-                  required
-                />
+                <div className="col-span-3 flex gap-2">
+                  <Input
+                    id="edit-longitude"
+                    name="longitude"
+                    type="number"
+                    step="any"
+                    className="flex-1"
+                    placeholder="VD: 98.765432"
+                    value={newLocationData.longitude}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={openMapDialog}
+                    className="flex items-center gap-1"
+                  >
+                    <Map className="h-4 w-4" />
+                    Chọn
+                  </Button>
+                </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-radius" className="text-right">
@@ -546,6 +634,38 @@ export default function LocationsPage() {
         itemName={deleteDialog.locationName}
         description="Bạn có chắc chắn muốn xóa địa điểm"
       />
+
+      {/* Dialog chọn vị trí trên bản đồ */}
+      <Dialog open={showMapDialog} onOpenChange={setShowMapDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Chọn vị trí trên bản đồ</DialogTitle>
+            <DialogDescription>
+              Nhấp vào bản đồ để chọn vị trí hoặc kéo marker để di chuyển. Vị trí hiện tại: {mapLatitude.toFixed(6)}, {mapLongitude.toFixed(6)}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <LocationMap
+              latitude={mapLatitude}
+              longitude={mapLongitude}
+              onLocationChange={handleMapLocationChange}
+              height="500px"
+            />
+          </div>
+          <DialogFooter className="mt-6">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowMapDialog(false)}
+            >
+              Hủy
+            </Button>
+            <Button type="button" onClick={confirmMapLocation}>
+              Xác nhận vị trí
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
