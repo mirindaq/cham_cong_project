@@ -28,6 +28,9 @@ import ShiftChangeRequestApprovalPage from "@/pages/admin/ShiftChangeRequestAppr
 import AdminNews from "@/pages/admin/AdminNews";
 import News from "@/pages/employee/News";
 import NewsDetail from "@/pages/employee/NewsDetail";
+import RemoteWorkRequest from "@/pages/employee/RemoteWorkRequest";
+import RemoteWorkRequestApprovalPage from "@/pages/admin/RemoteWorkRequestApprovalPage";
+import StatisticPersonal from "@/pages/employee/StatisticPersonal";
 
 export const routes = [
   {
@@ -130,6 +133,22 @@ export const routes = [
           </ProtectedRoute>
         ),
       },
+      {
+        path: "remote-work-requests",
+        element: (
+          <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
+            <RemoteWorkRequest />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "statistic-personal",
+        element: (
+          <ProtectedRoute allowedRoles={["EMPLOYEE"]}>
+            <StatisticPersonal />
+          </ProtectedRoute>
+        ),
+      },
     ],
   },
   // Admin routes
@@ -229,6 +248,14 @@ export const routes = [
         element: (
           <ProtectedRoute allowedRoles={["ADMIN"]}>
             <ShiftChangeRequestApprovalPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "remote-work-approvals",
+        element: (
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <RemoteWorkRequestApprovalPage />
           </ProtectedRoute>
         ),
       },

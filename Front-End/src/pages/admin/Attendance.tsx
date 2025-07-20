@@ -1,4 +1,4 @@
-import {  useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -158,7 +158,13 @@ function AttendancePage() {
       label: status,
       className: "bg-gray-500",
     };
+
+    if (status === null) {
+      return <Badge className="bg-gray-500">Chưa tới ca</Badge>;
+    }
+
     return <Badge className={statusInfo.className}>{statusInfo.label}</Badge>;
+
   };
 
   const formatTimeInput = (timeStr: string) => {
@@ -248,10 +254,10 @@ function AttendancePage() {
       setSelectedFile(null);
 
       loadAttendances();
-    } catch (error : any) {
+    } catch (error: any) {
       if (error.message === "Cannot edit attendance record for dates older than 5 days.") {
         toast.error("Không thể chỉnh sửa chấm công vì ngày chấm công đã quá 5 ngày!");
-      } 
+      }
       else {
         toast.error("Cập nhật chấm công thất bại");
       }
@@ -435,7 +441,11 @@ function AttendancePage() {
                         {attendance.workShifts.workShift.name}
                       </TableCell>
                       <TableCell className="p-2">
-                        {attendance.locationName}
+                        <td className="p-2">
+                          {attendance.checkIn && attendance.checkOut && !attendance.locationName
+                            ? "Làm việc từ xa"
+                            : (attendance.locationName || "-")}
+                        </td>
                       </TableCell>
                       <TableCell className="p-2">
                         {getStatusBadge(attendance.status)}

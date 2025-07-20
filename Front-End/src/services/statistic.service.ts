@@ -38,4 +38,21 @@ export const statisticApi = {
     });
     return response.data;
   },
+
+  getOverallAttendanceEmployeeByYear: async (year: number) => {
+    const response = await http.get(`/statistics/overall-attendance/${year}`);
+    return response.data.data;
+  },
+  getOverallEmployee: async (month: number, year: number) => {
+    const response = await http.get(
+      `/statistics/overall-employee/${month}/${year}`
+    );
+    return response.data.data;
+  },
+  getLeaveOverallEmployeeStatistics: async (year: number) => {
+    const response = await http.get(
+      `/statistics/leave-overall-employee/${year}`
+    );
+    return response.data.data;
+  },
 };

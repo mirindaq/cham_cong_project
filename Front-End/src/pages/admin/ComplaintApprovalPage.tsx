@@ -17,6 +17,7 @@ import {
   type ComplaintResponse,
 } from "@/types/complaint.type";
 import { complaintApi } from "@/services/complaint.service";
+import { attendanceApi } from "@/services/attendance.service";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import {
@@ -57,6 +58,10 @@ import {
   FileText,
   Clock,
   AlertCircle,
+  MapPin,
+  Camera,
+  Edit,
+  Lock,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -65,12 +70,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Spinner from "@/components/Spinner";
+import { useNavigate } from "react-router";
 
 export default function ComplaintApprovalPage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(false);
   const [complaints, setComplaints] = useState<ComplaintResponse[]>([]);
   const [departments, setDepartments] = useState<Department[]>();
-  const [ , setShifts] = useState<WorkShift[]>();
+  const [, setShifts] = useState<WorkShift[]>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<any>(null);
@@ -78,6 +85,8 @@ export default function ComplaintApprovalPage() {
     "approve" | "reject" | null
   >(null);
   const [reasonText, setReasonText] = useState("");
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [attendanceDetail, setAttendanceDetail] = useState<any>(null);
 
   const [filterComplaints, setFilterComplaints] = useState({
     employeeName: "",
@@ -223,10 +232,7 @@ export default function ComplaintApprovalPage() {
       if (response.status === 200) {
         toast.success("Phê duyệt đơn khiếu nại thành công");
       }
-      setShowDetailModal(false);
-      setReasonText("");
-      setShowReasonForm(null);
-      await loadComplaints();
+      navigate(`/admin/attendances?employeeName=${selectedDetail.employeeEmail}&date=${selectedDetail.date}`);
     } catch (error) {
       toast.error("Có lỗi xảy ra khi phê duyệt đơn khiếu nại");
     }
@@ -246,6 +252,19 @@ export default function ComplaintApprovalPage() {
       toast.error("Có lỗi xảy ra khi từ chối đơn khiếu nại");
     }
   };
+
+  const handleViewAttendance = async (employeeEmail: string, date: string) => {
+    try {
+      const response = await attendanceApi.getAttendanceByEmployeeAndDate(employeeEmail, date);
+      setAttendanceDetail(response.data);
+      setShowAttendanceModal(true);
+    } catch (error) {
+      console.error(error);
+      toast.error("Có lỗi xảy ra khi tải dữ liệu ca chấm công");
+    } 
+  };
+
+
 
   if (loading) {
     return <Spinner layout="admin" />;
@@ -458,9 +477,9 @@ export default function ComplaintApprovalPage() {
                         <TableCell className="p-2">
                           {complaint.createdAt
                             ? format(
-                                parseISO(complaint.createdAt),
-                                "dd/MM/yyyy HH:mm:ss"
-                              )
+                              parseISO(complaint.createdAt),
+                              "dd/MM/yyyy HH:mm:ss"
+                            )
                             : "N/A"}
                         </TableCell>
                         <TableCell className="p-2">
@@ -536,7 +555,7 @@ export default function ComplaintApprovalPage() {
                       Họ tên:
                     </span>
                     <span className="text-sm font-medium">
-                      {selectedDetail.employeeFullName}
+                      {selectedDetail.employeeName}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -570,9 +589,9 @@ export default function ComplaintApprovalPage() {
                     <span className="text-sm font-medium">
                       {selectedDetail.createdAt
                         ? format(
-                            parseISO(selectedDetail.createdAt),
-                            "dd/MM/yyyy HH:mm:ss"
-                          )
+                          parseISO(selectedDetail.createdAt),
+                          "dd/MM/yyyy HH:mm:ss"
+                        )
                         : "N/A"}
                     </span>
                   </div>
@@ -589,6 +608,9 @@ export default function ComplaintApprovalPage() {
                       : "N/A"}
                   </span>
                 </div>
+                <div className="flex items-center">
+                  <Button variant="default" onClick={() => handleViewAttendance(selectedDetail.employeeEmail, selectedDetail.date)}>Xem ca chấm công</Button>
+                </div>
 
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -604,61 +626,61 @@ export default function ComplaintApprovalPage() {
 
                 {(selectedDetail.status === "APPROVED" ||
                   selectedDetail.status === "REJECTED") && (
-                  <div className="border-t pt-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <AlertCircle className="w-4 h-4" />
-                      <span className="text-sm text-muted-foreground font-medium">
-                        Thông tin phản hồi:
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          Người duyệt:
-                        </span>
-                        <span className="text-sm font-medium">
-                          {selectedDetail.responseBy || "N/A"}
+                    <div className="border-t pt-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="text-sm text-muted-foreground font-medium">
+                          Thông tin phản hồi:
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          Ngày duyệt:
-                        </span>
-                        <span className="text-sm font-medium">
-                          {selectedDetail.responseDate
-                            ? format(
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
+                            Người duyệt:
+                          </span>
+                          <span className="text-sm font-medium">
+                            {selectedDetail.responseBy || "N/A"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
+                            Ngày duyệt:
+                          </span>
+                          <span className="text-sm font-medium">
+                            {selectedDetail.responseDate
+                              ? format(
                                 parseISO(selectedDetail.responseDate),
                                 "dd/MM/yyyy HH:mm:ss"
                               )
-                            : "N/A"}
-                        </span>
+                              : "N/A"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <AlertCircle className="w-4 h-4" />
+                          <span className="text-sm text-muted-foreground font-medium">
+                            Lý do{" "}
+                            {selectedDetail.status === "APPROVED"
+                              ? "duyệt"
+                              : "từ chối"}
+                            :
+                          </span>
+                        </div>
+                        <div className="bg-gray-50 border rounded p-3 text-sm text-gray-700 whitespace-pre-line">
+                          {selectedDetail.responseNote || "Không có"}
+                        </div>
                       </div>
                     </div>
-                    <div className="mt-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <AlertCircle className="w-4 h-4" />
-                        <span className="text-sm text-muted-foreground font-medium">
-                          Lý do{" "}
-                          {selectedDetail.status === "APPROVED"
-                            ? "duyệt"
-                            : "từ chối"}
-                          :
-                        </span>
-                      </div>
-                      <div className="bg-gray-50 border rounded p-3 text-sm text-gray-700 whitespace-pre-line">
-                        {selectedDetail.responseNote || "Không có"}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                  )}
               </div>
             )}
 
             <DialogFooter className="flex flex-col sm:flex-row gap-2 px-6 pb-6 pt-2 border-t mt-2">
               {selectedDetail?.status === "PENDING" &&
-              (showReasonForm === "approve" || showReasonForm === "reject") ? (
+                (showReasonForm === "approve" || showReasonForm === "reject") ? (
                 <div className="w-full space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="reason" className="font-medium">
@@ -667,9 +689,8 @@ export default function ComplaintApprovalPage() {
                     </Label>
                     <Textarea
                       id="reason"
-                      placeholder={`Nhập lý do ${
-                        showReasonForm === "approve" ? "duyệt" : "từ chối"
-                      }...`}
+                      placeholder={`Nhập lý do ${showReasonForm === "approve" ? "duyệt" : "từ chối"
+                        }...`}
                       value={reasonText}
                       onChange={(e) => setReasonText(e.target.value)}
                       className="min-h-[100px]"
@@ -737,6 +758,129 @@ export default function ComplaintApprovalPage() {
                   )}
                 </>
               )}
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAttendanceModal} onOpenChange={setShowAttendanceModal}>
+        <DialogContent className="min-w-[900px] max-h-[90vh] overflow-y-auto p-0">
+          <div className="bg-white rounded-lg shadow-lg">
+            <DialogHeader className="px-6 pt-6 pb-2 border-b">
+              <div className="flex items-center justify-between">
+                <DialogTitle className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5" />
+                  <span>Các ca chấm công trong ngày được đề cập</span>
+                </DialogTitle>
+                <div className="text-sm text-muted-foreground">
+                  Tổng số: {attendanceDetail?.data?.length || 0} ca làm việc
+                </div>
+              </div>
+            </DialogHeader>
+
+            {attendanceDetail && attendanceDetail.data && (
+              <div className="px-6 py-4">
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b bg-muted/50">
+                        <TableHead className="p-2 text-left font-medium">
+                          Ca làm việc
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Thời gian ca
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Check-in
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Check-out
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Vị trí
+                        </TableHead>
+                        <TableHead className="p-2 text-left font-medium">
+                          Trạng thái
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {attendanceDetail?.data?.map((attendance: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell className="p-2">
+                            <div className="space-y-1">
+                              <div className="font-medium">
+                                {attendance.workShifts?.workShift?.name || "N/A"}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {attendance.workShifts?.workShift?.partTime ? "Part-time" : "Full-time"}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <div className="text-sm">
+                              {attendance.workShifts?.workShift?.startTime} - {attendance.workShifts?.workShift?.endTime}
+                            </div>
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <div className="text-sm">
+                              {attendance.checkIn
+                                ? format(parseISO(attendance.checkIn), "HH:mm:ss")
+                                : "Chưa check-in"}
+                            </div>
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <div className="text-sm">
+                              {attendance.checkOut
+                                ? format(parseISO(attendance.checkOut), "HH:mm:ss")
+                                : "Chưa check-out"}
+                            </div>
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <div className="text-sm">
+                              {attendance.checkIn && attendance.checkOut && !attendance.locationName
+                                ? "Làm việc từ xa"
+                                : (attendance.locationName || "-")}
+                            </div>
+                          </TableCell>
+                          <TableCell className="p-2">
+                            {attendance.status === "PRESENT" ? (
+                              <Badge className="bg-green-600 text-white">Có mặt</Badge>
+                            ) : attendance.status === "ABSENT" ? (
+                              <Badge variant="destructive">Vắng mặt</Badge>
+                            ) : attendance.status === "LEAVE" ? (
+                              <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+                                Nghỉ phép
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline">-</Badge>
+                            )}
+                          </TableCell>
+
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {attendanceDetail.data.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Không có dữ liệu ca chấm công cho ngày này
+                  </div>
+                )}
+              </div>
+            )}
+
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 px-6 pb-6 pt-2 border-t mt-2">
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAttendanceModal(false)}
+                  className="flex-1 sm:flex-none"
+                >
+                  Đóng
+                </Button>
+              </div>
             </DialogFooter>
           </div>
         </DialogContent>

@@ -18,11 +18,12 @@ import {
   Menu,
   Home,
   CheckCircle,
-  FileText,
   Newspaper,
   AlertTriangle,
   Clock,
   ClipboardList,
+  Globe,
+  BarChart,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Notification from "@/components/Notification";
@@ -69,9 +70,19 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
       icon: Clock,
     },
     {
+      name: "Đơn xin làm từ xa",
+      href: "/employee/remote-work-requests",
+      icon: Globe,
+    },
+    {
       name: "Tin tức",
       href: "/employee/news",
       icon: Newspaper,
+    },
+    {
+      name: "Thống kê cá nhân",
+      href: "/employee/statistic-personal",
+      icon: BarChart,
     },
     { name: "Hồ sơ cá nhân", href: "/employee/profile", icon: User },
   ];

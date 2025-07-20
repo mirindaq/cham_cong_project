@@ -76,8 +76,8 @@ public class JwtUtil {
                     .build()
                     .parseClaimsJws(authToken);
             return true;
-        } catch (JwtException | IllegalArgumentException e) {
-            throw e;
+        } catch (JwtException | IllegalArgumentException ex) {
+            throw ex;
         }
     }
 

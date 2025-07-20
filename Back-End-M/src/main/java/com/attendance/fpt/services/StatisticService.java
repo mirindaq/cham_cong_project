@@ -20,4 +20,10 @@ public interface StatisticService {
     List<LeaveOverallResponse> getLeaveOverallStatisticsByMonth(int month, int year);
 
     void exportStatisticToExcel(int month, int year, HttpServletResponse response);
+
+    List<OverallStatisticEmployeeYearResponse> getOverallAttendanceEmployeeByYear(int year);
+
+    StatisticOverallEmployeeResponse getOverallEmployee( int month, int year);
+
+    List<LeaveOverallResponse> getLeaveOverallEmployeeStatistics( int year);
 }

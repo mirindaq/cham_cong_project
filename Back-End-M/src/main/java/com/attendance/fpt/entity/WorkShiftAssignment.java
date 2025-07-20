@@ -32,8 +32,11 @@ public class WorkShiftAssignment {
     @OneToOne(mappedBy = "workShiftAssignment")
     private Attendance attendance;
 
+    private boolean reminderSent;
+
     @PrePersist
     protected void onCreate() {
         this.locked = false;
+        this.reminderSent = false;
     }
 } 

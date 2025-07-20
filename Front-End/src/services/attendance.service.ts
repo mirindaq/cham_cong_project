@@ -16,6 +16,13 @@ export const attendanceApi = {
     );
     return response.data;
   },
+  getAttendanceByEmployeeAndDate: async (employeeEmail: string, date: string) => {
+    const params = new URLSearchParams();
+    params.set("employeeName", employeeEmail);
+    params.set("date", date);
+    const response = await http.get("/attendances", { params });
+    return response.data;
+  },
   checkIn: async (checkInData: CheckInRequest) => {
     const response = await http.post("/attendances/check-in", checkInData);
     return response.data;

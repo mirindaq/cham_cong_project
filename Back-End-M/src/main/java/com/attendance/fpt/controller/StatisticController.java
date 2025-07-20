@@ -104,4 +104,36 @@ public class StatisticController {
         );
     }
 
+    @GetMapping("/overall-attendance/{year}")
+    @PreAuthorize("hasRole('ROLE_EMPLOYEE')")
+    public ResponseEntity<ResponseSuccess<List<OverallStatisticEmployeeYearResponse>>> getOverallAttendanceEmployeeByYear(
+            @PathVariable("year") int year
+    ) {
+        return ResponseEntity.ok(new ResponseSuccess<>(HttpStatus.OK,
+                "Get overall attendance",
+                statisticService.getOverallAttendanceEmployeeByYear(year)));
+    }
+
+    @GetMapping("/overall-employee/{month}/{year}")
+    @PreAuthorize("hasRole('ROLE_EMPLOYEE')")
+    public ResponseEntity<ResponseSuccess<StatisticOverallEmployeeResponse>> getOverallEmployee(
+            @PathVariable("month") int month,
+            @PathVariable("year") int year
+    ) {
+        return ResponseEntity.ok(new ResponseSuccess<>(HttpStatus.OK,
+                "Get top staff attendance",
+                statisticService.getOverallEmployee( month, year)));
+    }
+
+    @GetMapping("/leave-overall-employee/{year}")
+    @PreAuthorize("hasRole('ROLE_EMPLOYEE')")
+    public ResponseEntity<ResponseSuccess<List<LeaveOverallResponse>>> getLeaveOverallEmployeeStatistics(     @PathVariable("year") int year) {
+        return ResponseEntity.ok(new ResponseSuccess<>(
+                HttpStatus.OK,
+                "Get leave overall statistics success",
+                statisticService.getLeaveOverallEmployeeStatistics(year)
+        ));
+    }
+
+
 }

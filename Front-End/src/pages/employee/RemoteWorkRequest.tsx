@@ -1,4 +1,6 @@
-import {  useCallback, useEffect, useState } from "react";
+import type React from "react";
+
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,8 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -19,17 +21,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { format, parseISO, subDays } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { EmployeeLayout } from "@/components/employee-layout";
-import {
-  ComplaintStatus,
-  ComplaintType,
-  type ComplaintAddRequest,
-  type ComplaintResponse,
-} from "@/types/complaint.type";
 import { toast } from "sonner";
-import { complaintApi } from "@/services/complaint.service";
 import PaginationComponent from "@/components/PaginationComponent";
 import {
   Table,
@@ -42,7 +37,6 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import Spinner from "@/components/Spinner";
 import {
-  AlertCircle,
   Building,
   Calendar,
   ClipboardPaste,
@@ -51,6 +45,8 @@ import {
   FileText,
   MoreHorizontal,
   UserIcon,
+  Briefcase,
+  Home,
 } from "lucide-react";
 import {
   Dialog,
@@ -64,91 +60,148 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { remoteWorkRequestApi } from "@/services/remoteWorkRequest.service";
+import type {
+  RemoteWorkRequestAddRequest,
+  RemoteWorkRequestResponse,
+} from "@/types/remoteWorkRequest.type";
+import { RemoteWorkRequestStatus } from "@/types/remoteWorkRequest.type";
+import type { WorkShiftResponse } from "@/types/workShift.type";
+import { workShiftApi } from "@/services/workShift.service";
 
-function DisputesPage() {
-  const [disputeDate, setDisputeDate] = useState<Date | undefined>(undefined);
-  const [disputeType, setDisputeType] = useState<string>("");
-
-  const [requestedChange, setRequestedChange] = useState("");
-  const [reason, setReason] = useState("");
-  const [complaints, setComplaints] = useState<ComplaintResponse[]>([]);
-
+function RemoteWorkRequest() {
+  const [workDate, setWorkDate] = useState<Date | undefined>(undefined);
+  const [selectedShift, setSelectedShift] = useState<string>("");
+  const [reason, setReason] = useState<string>("");
+  const [remoteWorkRequests, setRemoteWorkRequests] = useState<
+    RemoteWorkRequestResponse[]
+  >([]);
+  const [shifts, setShifts] = useState<WorkShiftResponse[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [loadingShifts, setLoadingShifts] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPage, setTotalPage] = useState<number>(1);
-  const { accessToken } = useAuth();
+  const [, setTotalItem] = useState<number>(0);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedDetail, setSelectedDetail] = useState<any>(null);
+  const [selectedDetail, setSelectedDetail] =
+    useState<RemoteWorkRequestResponse | null>(null);
+  const { accessToken } = useAuth();
 
-  const loadComplaints = useCallback(async () => {
+  const loadRemoteWorkRequests = useCallback(async () => {
     setLoading(true);
-
     try {
-      const response = await complaintApi.getAllComplaintsByEmployee(
+      const response = await remoteWorkRequestApi.getAllRemoteWorkRequestsByEmployee(
         currentPage,
-        3
+        10
       );
-      setComplaints(response.data);
+      console.log("Remote work requests:", response.data);
+      setRemoteWorkRequests(response.data);
       setTotalPage(response.totalPage);
-    } catch (error) {
+      setTotalItem(response.totalItem);
+    } catch (error: any) {
+      toast.error("Lỗi khi tải danh sách yêu cầu làm việc từ xa");
     } finally {
       setLoading(false);
     }
-  }, [accessToken, currentPage]);
+  }, [currentPage]);
+
+  const loadShiftsByDate = useCallback(async (date: string) => {
+    setLoadingShifts(true);
+    try {
+      const response = await workShiftApi.getWorkShiftsByEmployeeIdBetweenDate(
+        date,
+        date
+      );
+      console.log("Shifts loaded for date:", date, response);
+      setShifts(response);
+    } catch (error: any) {
+      toast.error("Lỗi khi tải danh sách ca làm việc");
+      setShifts([]);
+    } finally {
+      setLoadingShifts(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (accessToken) {
-      loadComplaints();
+      loadRemoteWorkRequests();
     }
-  }, [accessToken, loadComplaints]);
+  }, [accessToken, loadRemoteWorkRequests]);
+
+  // Load shifts when date changes
+  useEffect(() => {
+    if (workDate) {
+      const dateString = format(workDate, "yyyy-MM-dd");
+      loadShiftsByDate(dateString);
+      setSelectedShift(""); // Reset selected shift when date changes
+    } else {
+      setShifts([]);
+      setSelectedShift("");
+    }
+  }, [workDate, loadShiftsByDate]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!accessToken) {
-      toast.error("Bạn cần đăng nhập để gửi khiếu nại");
       return;
     }
+
+    if (!workDate || !selectedShift || !reason.trim()) {
+      toast.error("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
     try {
-      const newComplaint: ComplaintAddRequest = {
-        reason,
-        date: disputeDate ? disputeDate : new Date(),
-        complaintType: disputeType,
-        requestChange: requestedChange,
+      const newRequest: RemoteWorkRequestAddRequest = {
+        date: format(workDate, "yyyy-MM-dd"),
+        workShiftId: Number(selectedShift),
+        reason: reason.trim(),
       };
-      await complaintApi.createComplaint(newComplaint);
-      toast.success("Đã gửi yêu cầu khiếu nại thành công!");
-      loadComplaints();
+
+      const response = await remoteWorkRequestApi.createRemoteWorkRequest(newRequest);
+      if (response.status === 201) {
+        toast.success("Đã gửi yêu cầu làm việc từ xa thành công!");
+      }
+      loadRemoteWorkRequests();
+
       // Reset form
-      setDisputeDate(undefined);
-      setDisputeType("");
-      setRequestedChange("");
+      setWorkDate(undefined);
+      setSelectedShift("");
       setReason("");
     } catch (error: any) {
-      toast.error("Vui lòng nhập đầy đủ thông tin");
+      toast.error(error.message || "Lỗi khi gửi yêu cầu");
     }
   };
 
-  const handleRecall = async (id: number) => {
-    if (window.confirm("Bạn có chắc chắn muốn thu hồi đơn khiếu nại này?")) {
-      await complaintApi.recallComplaint(id);
-      toast.success("Đã thu hồi đơn thành công!");
-      loadComplaints();
+  const handleCancel = async (id: number) => {
+    if (
+      window.confirm("Bạn có chắc chắn muốn thu hồi yêu cầu làm việc từ xa này?")
+    ) {
+      try {
+        const response = await remoteWorkRequestApi.recallRemoteWorkRequest(id);
+        if (response.status === 200) {
+          toast.success("Đã thu hồi yêu cầu làm việc từ xa thành công!");
+          loadRemoteWorkRequests();
+        }
+      } catch (error) {
+        toast.error("Lỗi khi thu hồi yêu cầu");
+      }
     }
   };
 
-  const getStatusBadge = (status: ComplaintStatus) => {
+  const getStatusBadge = (status: RemoteWorkRequestStatus) => {
     switch (status) {
-      case ComplaintStatus.APPROVED:
+      case RemoteWorkRequestStatus.APPROVED:
         return <Badge className="bg-green-600 text-white">Đã duyệt</Badge>;
-      case ComplaintStatus.REJECTED:
+      case RemoteWorkRequestStatus.REJECTED:
         return <Badge variant="destructive">Từ chối</Badge>;
-      case ComplaintStatus.PENDING:
+      case RemoteWorkRequestStatus.PENDING:
         return (
           <Badge variant="outline" className="text-blue-600 border-blue-600">
             Đang xử lý
           </Badge>
         );
-      case ComplaintStatus.RECALLED:
+      case RemoteWorkRequestStatus.RECALLED:
         return (
           <Badge
             variant="outline"
@@ -176,82 +229,94 @@ function DisputesPage() {
         <Card>
           <form onSubmit={handleSubmit}>
             <CardHeader>
-              <CardTitle>Gửi Khiếu Nại Chấm Công</CardTitle>
+              <CardTitle>Đăng Ký Làm Việc Từ Xa</CardTitle>
               <CardDescription>
-                Yêu cầu chỉnh sửa thông tin chấm công của bạn
+                Đăng ký làm việc từ xa cho ngày và ca làm việc cụ thể
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="disputeDate">Ngày Cần Khiếu Nại</Label>
+                <Label htmlFor="workDate">Ngày Làm Việc</Label>
                 <Input
-                  id="disputeDate"
+                  id="workDate"
                   type="date"
-                  value={disputeDate ? format(disputeDate, "yyyy-MM-dd") : ""}
+                  value={workDate ? format(workDate, "yyyy-MM-dd") : ""}
                   onChange={(e) =>
-                    setDisputeDate(
+                    setWorkDate(
                       e.target.value ? new Date(e.target.value) : undefined
                     )
                   }
-                  min={format(subDays(new Date(), 2), "yyyy-MM-dd")}
-                  max={format(new Date(), "yyyy-MM-dd")}
                   required
+                  min={format(new Date(), "yyyy-MM-dd")}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="disputeType">Loại Vấn Đề</Label>
+                <Label htmlFor="selectedShift">Ca Làm Việc</Label>
                 <Select
-                  value={disputeType}
-                  onValueChange={setDisputeType}
+                  value={selectedShift}
+                  onValueChange={setSelectedShift}
                   required
+                  disabled={loadingShifts || shifts.length === 0}
                 >
-                  <SelectTrigger id="disputeType">
-                    <SelectValue placeholder="Chọn loại vấn đề" />
+                  <SelectTrigger id="selectedShift">
+                    <SelectValue 
+                      placeholder={
+                        loadingShifts 
+                          ? "Đang tải ca làm việc..." 
+                          : shifts.length === 0 
+                            ? "Vui lòng chọn ngày trước" 
+                            : "Chọn ca làm việc"
+                      } 
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(ComplaintType).map(([key, displayName]) => (
-                      <SelectItem key={key} value={key}>
-                        {displayName}
+                    {shifts.length > 0 ? (
+                      shifts.map((shift) => (
+                        <SelectItem key={shift.id} value={shift.id.toString()}>
+                          {shift.name}
+                          <br />
+                          <span className="text-muted-foreground">
+                            {(shift.startTime || "00:00") +
+                              " - " +
+                              (shift.endTime || "00:00")}
+                          </span>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="none" disabled>
+                        {loadingShifts ? "Đang tải..." : "Không có ca làm việc nào"}
                       </SelectItem>
-                    ))}
+                    )}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="requestedChange">Yêu Cầu Thay Đổi</Label>
-                <Input
-                  id="requestedChange"
-                  placeholder="Ví dụ: Thêm giờ checkout: 17:30"
-                  value={requestedChange}
-                  onChange={(e) => setRequestedChange(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="reason">Lý Do Khiếu Nại</Label>
+                <Label htmlFor="reason">Lý Do</Label>
                 <Textarea
                   id="reason"
-                  placeholder="Vui lòng giải thích lý do cần chỉnh sửa"
+                  placeholder="Nhập lý do làm việc từ xa..."
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   required
+                  rows={3}
                 />
               </div>
             </CardContent>
             <CardFooter>
-              <Button type="submit">Gửi Khiếu Nại</Button>
+              <Button type="submit" disabled={loadingShifts || shifts.length === 0}>
+                Gửi Yêu Cầu
+              </Button>
             </CardFooter>
           </form>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Lịch Sử Khiếu Nại</CardTitle>
+            <CardTitle>Lịch Sử Yêu Cầu Làm Việc Từ Xa</CardTitle>
             <CardDescription>
-              Xem lịch sử khiếu nại chấm công của bạn
+              Xem lịch sử yêu cầu làm việc từ xa của bạn
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -260,10 +325,10 @@ function DisputesPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>STT</TableHead>
-                    <TableHead>Ngày cần khiếu nại</TableHead>
-                    <TableHead>Ngày tạo</TableHead>
-                    <TableHead>Loại khiếu nại</TableHead>
-                    <TableHead>Lý Do</TableHead>
+                    <TableHead>Ngày làm việc</TableHead>
+                    <TableHead>Ca làm việc</TableHead>
+                    <TableHead>Lý do</TableHead>
+                    <TableHead>Ngày đăng ký</TableHead>
                     <TableHead>Ngày phản hồi</TableHead>
                     <TableHead>Người phản hồi</TableHead>
                     <TableHead>Trạng thái</TableHead>
@@ -271,37 +336,45 @@ function DisputesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {complaints.map((complaint, index) => (
-                    <TableRow key={complaint.id}>
+                  {remoteWorkRequests?.map((request, index) => (
+                    <TableRow key={request.id}>
                       <TableCell>
                         {(currentPage - 1) * 10 + index + 1}
                       </TableCell>
                       <TableCell>
-                        {complaint.date
-                          ? format(parseISO(complaint.date), "dd/MM/yyyy")
+                        {request.date
+                          ? format(parseISO(request.date), "dd/MM/yyyy")
                           : "N/A"}
                       </TableCell>
                       <TableCell>
-                        {complaint.createdAt
+                        {request.workShift.name}({request.workShift.startTime} -{" "}
+                        {request.workShift.endTime})
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-xs truncate" title={request.reason}>
+                          {request.reason}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {request.createdAt
                           ? format(
-                              parseISO(complaint.createdAt),
-                              "dd/MM/yyyy HH:mm:ss"
+                              parseISO(request.createdAt),
+                              "dd/MM/yyyy HH:mm"
                             )
                           : "N/A"}
                       </TableCell>
                       <TableCell>
-                        {ComplaintType[
-                          complaint.complaintType as keyof typeof ComplaintType
-                        ] ?? complaint.complaintType}
+                        {request.responseDate
+                          ? format(
+                              parseISO(request.responseDate),
+                              "dd/MM/yyyy HH:mm"
+                            )
+                          : "Chưa phản hồi"}
                       </TableCell>
-                      <TableCell>{complaint.reason}</TableCell>
                       <TableCell>
-                        {complaint.responseDate || "Chưa phản hồi"}
+                        {request.responseBy || "Chưa phản hồi"}
                       </TableCell>
-                      <TableCell>
-                        {complaint.responseBy || "Chưa phản hồi"}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(complaint.status)}</TableCell>
+                      <TableCell>{getStatusBadge(request.status)}</TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -312,16 +385,16 @@ function DisputesPage() {
                           <DropdownMenuContent>
                             <DropdownMenuItem
                               onClick={() => {
-                                setSelectedDetail(complaint);
+                                setSelectedDetail(request);
                                 setShowDetailModal(true);
                               }}
                             >
                               <Eye width={20} className="mr-2" />
                               Xem chi tiết
                             </DropdownMenuItem>
-                            {complaint.status === "PENDING" && (
+                            {request.status === "PENDING" && (
                               <DropdownMenuItem
-                                onClick={() => handleRecall(complaint.id)}
+                                onClick={() => handleCancel(request.id)}
                               >
                                 <ClipboardPaste width={20} className="mr-2" />
                                 Thu hồi
@@ -332,13 +405,10 @@ function DisputesPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {complaints.length === 0 && (
+                  {remoteWorkRequests.length === 0 && (
                     <TableRow>
-                      <TableCell
-                        colSpan={9}
-                        className="p-4 text-center text-muted-foreground"
-                      >
-                        Không có khiếu nại nào
+                      <TableCell colSpan={9} className="text-center">
+                        Không có yêu cầu làm việc từ xa nào
                       </TableCell>
                     </TableRow>
                   )}
@@ -360,12 +430,12 @@ function DisputesPage() {
           <div className="bg-white rounded-lg shadow-lg">
             <div className="flex items-center justify-between px-6 pt-6 pb-2 border-b">
               <DialogTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5" />
+                <Home className="w-5 h-5" />
                 <span className="text-base font-semibold">
-                  Chi tiết phiếu khiếu nại
+                  Chi tiết yêu cầu làm việc từ xa
                 </span>
               </DialogTitle>
-              {getStatusBadge(selectedDetail?.status)}
+              {selectedDetail && getStatusBadge(selectedDetail.status)}
             </div>
 
             {selectedDetail && (
@@ -392,21 +462,38 @@ function DisputesPage() {
                   </div>
                 </div>
 
-                {/* Thông tin nghỉ phép */}
+                {/* Thông tin làm việc từ xa */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
-                      Loại nghỉ phép:
+                      Ngày làm việc:
                     </span>
                     <span className="text-sm font-medium">
-                      {selectedDetail.complaintType}
+                      {selectedDetail.date
+                        ? format(parseISO(selectedDetail.date), "dd/MM/yyyy")
+                        : "N/A"}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
-                      Ngày tạo:
+                      Ca đăng ký:
+                    </span>
+                    {selectedDetail.workShift ? (
+                      <span className="text-sm font-medium">
+                        {selectedDetail.workShift.name} (
+                        {selectedDetail.workShift.startTime} -{" "}
+                        {selectedDetail.workShift.endTime})
+                      </span>
+                    ) : (
+                      <span className="text-sm font-medium"></span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Ngày đăng ký:
                     </span>
                     <span className="text-sm font-medium">
                       {selectedDetail.createdAt
@@ -417,25 +504,14 @@ function DisputesPage() {
                         : "N/A"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      Ngày khiếu nại:
-                    </span>
-                    <span className="text-sm font-medium">
-                      {selectedDetail.date
-                        ? format(parseISO(selectedDetail.date), "dd/MM/yyyy")
-                        : "N/A"}
-                    </span>
-                  </div>
                 </div>
 
                 {/* Lý do */}
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <AlertCircle className="w-4 h-4" />
+                    <FileText className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground font-medium">
-                      Lý do xin nghỉ:
+                      Lý do làm việc từ xa:
                     </span>
                   </div>
                   <div className="bg-gray-50 border rounded p-3 text-sm text-gray-700 whitespace-pre-line">
@@ -448,25 +524,25 @@ function DisputesPage() {
                   selectedDetail.status === "REJECTED") && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 text-muted-foreground" />
+                      <FileText className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground font-medium">
-                        Thông tin duyệt:
+                        Thông tin phản hồi:
                       </span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex items-center gap-2">
                         <UserIcon className="w-4 h-4 text-muted-foreground" />
                         <span className="text-sm text-muted-foreground">
-                          Người duyệt:
+                          Người phản hồi:
                         </span>
                         <span className="text-sm font-medium">
-                          {selectedDetail.responseBy || "Không có"}
+                          {selectedDetail.responseBy || "N/A"}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-muted-foreground" />
                         <span className="text-sm text-muted-foreground">
-                          Ngày duyệt:
+                          Ngày phản hồi:
                         </span>
                         <span className="text-sm font-medium">
                           {selectedDetail.responseDate
@@ -478,21 +554,19 @@ function DisputesPage() {
                         </span>
                       </div>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <AlertCircle className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground font-medium">
-                          Lý do{" "}
-                          {selectedDetail.status === "APPROVED"
-                            ? "duyệt"
-                            : "từ chối"}
-                          :
-                        </span>
+                    {selectedDetail.responseNote && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <FileText className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground font-medium">
+                            Ghi chú phản hồi:
+                          </span>
+                        </div>
+                        <div className="bg-gray-50 border rounded p-3 text-sm text-gray-700 whitespace-pre-line">
+                          {selectedDetail.responseNote}
+                        </div>
                       </div>
-                      <div className="bg-gray-50 border rounded p-3 text-sm text-gray-700 whitespace-pre-line">
-                        {selectedDetail.responseNote || "N/A"}
-                      </div>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -514,4 +588,4 @@ function DisputesPage() {
   );
 }
 
-export default DisputesPage;
+export default RemoteWorkRequest;

@@ -94,6 +94,38 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
+    @Override
+    @Async("taskExecutor")
+    public void sendReminderEmail(String to, String message) {
+        try {
+            Context context = new Context();
+            context.setVariable("messageContent", message);
+
+            String text = templateEngine.process("reminder-email", context);
+
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, UTF_8_ENCODING);
+
+            helper.setPriority(1);
+            helper.setSubject("Nhắc nhở: Sắp đến ca làm việc của bạn");
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setText(text, true);
+
+            mailSender.send(mimeMessage);
+            log.info("Đã gửi email nhắc nhở thành công đến: {}", to);
+        } catch (MessagingException exception) {
+            log.error("Lỗi khi gửi email nhắc nhở: {}", exception.getMessage());
+            if (exception.getMessage().contains("Recipient address rejected")) {
+                throw new RuntimeException("Địa chỉ email không tồn tại");
+            } else {
+                throw new RuntimeException("Không thể gửi email nhắc nhở: " + exception.getMessage());
+            }
+        } catch (Exception exception) {
+            throw new RuntimeException("Có lỗi xảy ra khi gửi email nhắc nhở: " + exception.getMessage());
+        }
+    }
+
 
 
 }

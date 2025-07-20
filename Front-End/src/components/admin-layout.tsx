@@ -32,6 +32,7 @@ import {
   CalendarDays,
   CalendarSync,
   Newspaper,
+  Globe,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -81,6 +82,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       name: "Đơn xin đổi ca làm",
       href: "/admin/shift-change-approvals",
       icon: CalendarSync,
+    },
+    {
+      name: "Đơn xin làm từ xa",
+      href: "/admin/remote-work-approvals",
+      icon: Globe,
     },
     {
       name: "Quản lý số ngày nghỉ phép",

@@ -282,7 +282,7 @@ export default function ReportsPage() {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b bg-muted/50">
-                          <th className="p-2 text-left font-medium">Bộ phận</th>
+                          <th className="p-2 text-left font-medium">Tuần</th>
                           <th className="p-2 text-left font-medium">
                             Đi làm đúng giờ
                           </th>

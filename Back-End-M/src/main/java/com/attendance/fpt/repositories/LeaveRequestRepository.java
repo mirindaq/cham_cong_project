@@ -59,4 +59,14 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
             " GROUP BY lt " )
     List<Object[]> getLeaveOverallStatisticsByMonth(int month, int year);
 
+    @Query("""
+    SELECT lb.leaveType.name, lb.usedDay
+    FROM LeaveBalance lb
+    WHERE lb.employee.id = :employeeId
+      AND lb.year = :year
+      AND lb.usedDay > 0
+""")
+    List<Object[]> getLeaveOverallEmployeeStatistics(@Param("employeeId") Long employeeId,
+                                                     @Param("year") int year);
+
 }

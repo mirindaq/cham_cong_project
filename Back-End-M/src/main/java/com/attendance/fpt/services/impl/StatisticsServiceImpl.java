@@ -1,5 +1,7 @@
 package com.attendance.fpt.services.impl;
 
+import com.attendance.fpt.entity.Attendance;
+import com.attendance.fpt.entity.Employee;
 import com.attendance.fpt.entity.WorkShiftAssignment;
 import com.attendance.fpt.enums.AttendanceStatus;
 import com.attendance.fpt.model.response.*;
@@ -8,6 +10,7 @@ import com.attendance.fpt.repositories.LeaveRequestRepository;
 import com.attendance.fpt.repositories.WorkShiftAssignmentRepository;
 import com.attendance.fpt.services.StatisticService;
 import com.attendance.fpt.utils.BaseExport;
+import com.attendance.fpt.utils.SecurityUtil;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,6 +18,8 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -25,6 +30,8 @@ public class StatisticsServiceImpl implements StatisticService {
     private final AttendanceRepository attendanceRepository;
     private final WorkShiftAssignmentRepository workShiftAssignmentRepository;
     private final LeaveRequestRepository leaveRequestRepository;
+    private final SecurityUtil securityUtil;
+
     @Override
     public AttendanceWeeklyResponse getWeeklyAttendanceStatistics() {
         LocalDate startOfWeek = LocalDate.now().with(DayOfWeek.MONDAY);
@@ -207,6 +214,104 @@ public class StatisticsServiceImpl implements StatisticService {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public List<OverallStatisticEmployeeYearResponse> getOverallAttendanceEmployeeByYear(int year) {
+        Employee employee = securityUtil.getCurrentUser();
+        List<WorkShiftAssignment> assignments = workShiftAssignmentRepository.getAssignmentsByYear(employee.getId(), year);
+
+        Map<Integer, OverallStatisticEmployeeYearResponse> statsMap = new HashMap<>();
+
+        for (WorkShiftAssignment wsa : assignments) {
+            int month = wsa.getDateAssign().getMonthValue();
+            LocalDate date = wsa.getDateAssign();
+            LocalTime endTime = wsa.getWorkShift().getEndTime();
+            LocalDateTime endDateTime = LocalDateTime.of(date, endTime);
+
+            Attendance attendance = wsa.getAttendance();
+
+            OverallStatisticEmployeeYearResponse stat = statsMap.getOrDefault(month,
+                    OverallStatisticEmployeeYearResponse.builder()
+                            .month("T" + month)
+                            .present(0)
+                            .absent(0)
+                            .late(0)
+                            .leave(0)
+                            .total(0)
+                            .build()
+            );
+
+            if (attendance != null) {
+                switch (attendance.getStatus()) {
+                    case PRESENT -> stat.setPresent(stat.getPresent() + 1);
+                    case LATE -> stat.setLate(stat.getLate() + 1);
+                    case LEAVE -> stat.setLeave(stat.getLeave() + 1);
+                }
+            } else {
+                if (LocalDateTime.now().isAfter(endDateTime)) {
+                    stat.setAbsent(stat.getAbsent() + 1);
+                }
+
+            }
+
+            stat.setTotal(stat.getTotal() + 1);
+            statsMap.put(month, stat);
+        }
+
+        // Trả về đủ 12 tháng
+        List<OverallStatisticEmployeeYearResponse> result = new ArrayList<>();
+        for (int i = 1; i <= 12; i++) {
+            result.add(statsMap.getOrDefault(i,
+                    OverallStatisticEmployeeYearResponse.builder()
+                            .month("T" + i)
+                            .present(0)
+                            .absent(0)
+                            .late(0)
+                            .leave(0)
+                            .total(0)
+                            .build()
+            ));
+        }
+
+        return result;
+    }
+
+
+    @Override
+    public StatisticOverallEmployeeResponse getOverallEmployee( int month, int year) {
+        Employee employee = securityUtil.getCurrentUser();
+        Object[] result = (Object[]) workShiftAssignmentRepository.getStatisticOverallEmployeeByMonthAndYear(
+                employee.getId(),
+                month, year
+        );
+
+        long totalAssigned = ((Number) result[0]).longValue();
+        long present = ((Number) result[1]).longValue();
+        double totalHours = result[2] != null ? ((Number) result[2]).doubleValue() : 0.0;
+
+
+        StatisticOverallEmployeeResponse response = new StatisticOverallEmployeeResponse();
+        response.setTotalWorkShiftAssigned((int) totalAssigned);
+        response.setOnTimeCount( (int) present );
+        response.setTotalWorkingHours(totalHours);
+
+        return response;
+    }
+
+    @Override
+    public List<LeaveOverallResponse> getLeaveOverallEmployeeStatistics( int year) {
+        Employee employee = securityUtil.getCurrentUser();
+        List<Object[]> statistic = leaveRequestRepository.getLeaveOverallEmployeeStatistics(employee.getId(), year);
+        if (statistic != null && !statistic.isEmpty()) {
+            return statistic.stream()
+                    .map(rs -> LeaveOverallResponse.builder()
+                            .name((String) rs[0])
+                            .value(rs[1] != null ? (Integer) rs[1] : 0L)
+                            .build())
+                    .collect(Collectors.toList());
+        }
+        return List.of();
     }
 
 

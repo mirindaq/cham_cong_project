@@ -14,6 +14,7 @@ public class ComplaintsConverter {
                 .responseNote(complaint.getResponseNote())
                 .responseBy(complaint.getResponseBy() != null ? complaint.getResponseBy().getFullName() : null)
                 .employeeName(complaint.getEmployee().getFullName())
+                .employeeEmail(complaint.getEmployee().getEmail())
                 .status(complaint.getStatus())
                 .complaintType(complaint.getComplaintType() != null ? complaint.getComplaintType().getDisplayName() : null)
                 .createdAt(complaint.getCreatedAt())

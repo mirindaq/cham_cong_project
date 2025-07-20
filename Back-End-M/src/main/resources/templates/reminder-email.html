@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nhắc nhở check-in</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #00c9ff 0%, #92fe9d 100%);
+            padding: 30px 20px;
+            text-align: center;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px 25px;
+        }
+
+        .content p {
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .reminder-box {
+            margin: 25px 0;
+            background-color: #e6f7ff;
+            border-left: 6px solid #1890ff;
+            padding: 20px;
+            border-radius: 6px;
+        }
+
+        .reminder-message {
+            font-size: 17px;
+            color: #0f3057;
+            font-weight: 500;
+        }
+
+        .footer {
+            background-color: #fafafa;
+            text-align: center;
+            padding: 20px;
+            font-size: 13px;
+            color: #888;
+            border-top: 1px solid #eaeaea;
+        }
+
+        @media screen and (max-width: 600px) {
+            .content {
+                padding: 20px 15px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .reminder-box {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="email-container">
+    <div class="header">
+        <h1>🔔 Nhắc nhở ca làm việc</h1>
+        <p>Đừng quên check-in đúng giờ nhé!</p>
+    </div>
+    <div class="content">
+        <p>Xin chào,</p>
+        <p>Bạn có một ca làm việc sắp diễn ra. Vui lòng kiểm tra lại thời gian và nhớ check-in đúng giờ.</p>
+
+        <div class="reminder-box">
+            <div class="reminder-message">
+                <span th:text="${messageContent}"></span>
+            </div>
+        </div>
+
+        <p>Cảm ơn bạn đã hợp tác. Chúc bạn có một ngày làm việc hiệu quả!</p>
+    </div>
+    <div class="footer">
+        Email này được gửi tự động từ hệ thống chấm công. Vui lòng không trả lời.
+    </div>
+</div>
+</body>
+</html>
