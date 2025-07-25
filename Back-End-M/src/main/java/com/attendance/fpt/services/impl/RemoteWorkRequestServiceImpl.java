@@ -153,6 +153,12 @@ public class RemoteWorkRequestServiceImpl implements RemoteWorkRequestService {
                 request.getWorkShift(), request.getDate(), request.getEmployee())
                 .orElseThrow(() -> new ResourceNotFoundException("Work shift assignment not found."));
 
+        if ( workShiftAssignment.getDateAssign().isBefore(LocalDate.now()) ||
+                (workShiftAssignment.getDateAssign().isEqual(LocalDate.now()) &&
+                        workShiftAssignment.getWorkShift().getStartTime().isBefore(LocalTime.now()))) {
+            throw new ConflictException("Cannot approve remote work request for past time.");
+        }
+
         if ( workShiftAssignment.getAttendance() != null &&
                 workShiftAssignment.getAttendance().getStatus() == AttendanceStatus.LEAVE) {
             throw new ConflictException("Cannot approve remote work request when attendance already leave for this shift.");

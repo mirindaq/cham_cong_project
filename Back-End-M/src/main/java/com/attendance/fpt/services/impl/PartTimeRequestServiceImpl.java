@@ -152,8 +152,11 @@ public class PartTimeRequestServiceImpl implements PartTimeRequestService {
             throw new IllegalStateException("Cannot recall a non-pending request");
         }
 
-        if (partTimeRequest.getDate().isBefore(LocalDate.now())) {
-            throw new ConflictException("Cannot assign work shift in the past");
+
+        if ( partTimeRequest.getDate().isBefore(LocalDate.now()) ||
+                (partTimeRequest.getDate().isEqual(LocalDate.now()) &&
+                        partTimeRequest.getWorkShift().getStartTime().isBefore(LocalTime.now()))) {
+            throw new ConflictException("Cannot approve part time request for past time.");
         }
 
         if (!workShiftAssignmentRepository.existsOverlappingAssignments(employee.getId(), partTimeRequest.getDate(),

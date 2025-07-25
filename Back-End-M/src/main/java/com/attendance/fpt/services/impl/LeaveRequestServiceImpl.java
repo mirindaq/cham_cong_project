@@ -161,11 +161,9 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
             throw new IllegalStateException("Cannot approve a non-pending leave request");
         }
 
-        leaveRequest.setStatus(LeaveRequestStatus.APPROVED);
-        leaveRequest.setResponseDate(LocalDateTime.now());
-        leaveRequest.setResponseNote(leaveRequestHandleRequest.getResponseNote());
-        leaveRequest.setResponseBy(employee);
-        leaveRequestRepository.save(leaveRequest);
+        if ( leaveRequest.getStartDate().isBefore(LocalDate.now()) ){
+            throw  new IllegalStateException("Cannot approve leave request with date start before today");
+        }
 
         List<WorkShiftAssignment> wss = workShiftAssignmentRepository.findByEmployee_IdAndDateAssignBetweenAndWorkShift_IdAndAttendanceIsNull(
                 leaveRequest.getEmployee().getId(),
@@ -202,6 +200,12 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         if (leaveBalance.getRemainingDay() - totalDays < 0) {
             throw new IllegalStateException("Not enough leave balance for this request");
         }
+
+        leaveRequest.setStatus(LeaveRequestStatus.APPROVED);
+        leaveRequest.setResponseDate(LocalDateTime.now());
+        leaveRequest.setResponseNote(leaveRequestHandleRequest.getResponseNote());
+        leaveRequest.setResponseBy(employee);
+        leaveRequestRepository.save(leaveRequest);
 
         leaveBalance.setUsedDay((leaveBalance.getUsedDay() + totalDays));
         leaveBalance.setRemainingDay(leaveBalance.getRemainingDay() - totalDays);

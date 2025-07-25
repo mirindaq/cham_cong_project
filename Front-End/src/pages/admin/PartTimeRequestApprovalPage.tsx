@@ -230,8 +230,12 @@ export default function PartTimeRequestApprovalPage() {
       setReasonText("");
       setShowReasonForm(null);
       await loadPartTimeRequests();
-    } catch (error) {
-      toast.error("Có lỗi xảy ra khi phê duyệt đơn đăng ký parttime");
+    } catch (error: any) {
+      if (error.message === "Cannot approve part time request for past time.") {
+        toast.error("Không thể phê duyệt đơn đăng ký parttime trong quá khứ!");
+      } else {
+        toast.error("Có lỗi xảy ra khi phê duyệt đơn đăng ký parttime");
+      }
     }
   };
 

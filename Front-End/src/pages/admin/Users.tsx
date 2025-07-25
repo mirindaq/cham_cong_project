@@ -39,7 +39,6 @@ import { userApi } from "@/services/user.service";
 import { departmentApi } from "@/services/department.service";
 import type { UserResponse, UserRequest } from "@/types/user.type";
 import { useSearchParams } from "react-router";
-import { isBefore, startOfDay } from "date-fns";
 import PaginationComponent from "@/components/PaginationComponent";
 import {
   Table,
@@ -201,12 +200,6 @@ function UsersPage() {
     ) : (
       <Badge variant="secondary">Vô hiệu hóa</Badge>
     );
-  };
-
-  const canEditUser = (user: UserResponse) => {
-    const today = startOfDay(new Date());
-    const joinDate = new Date(user.joinDate);
-    return isBefore(joinDate, today);
   };
 
   const onPageChange = (page: number) => {
@@ -433,23 +426,15 @@ function UsersPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {canEditUser(user) ? (
-                              <DropdownMenuItem asChild>
-                                <button
-                                  className="flex w-full items-center"
-                                  onClick={() => handleOpenEditDialog(user)}
-                                >
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Chỉnh sửa
-                                </button>
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem disabled>
-                                <span className="text-muted-foreground">
-                                  Không thể chỉnh sửa người dùng chưa vào làm
-                                </span>
-                              </DropdownMenuItem>
-                            )}
+                            <DropdownMenuItem asChild>
+                              <button
+                                className="flex w-full items-center"
+                                onClick={() => handleOpenEditDialog(user)}
+                              >
+                                <Edit className="mr-2 h-4 w-4" />
+                                Chỉnh sửa
+                              </button>
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

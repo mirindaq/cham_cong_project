@@ -233,8 +233,12 @@ export default function LeaveRequestApprovalPage() {
       setReasonText("");
       setShowReasonForm(null);
       await loadLeaveRequests();
-    } catch (error) {
-      toast.error("Có lỗi xảy ra khi phê duyệt đơn nghỉ phép");
+    } catch (error: any) {
+      if (error.message === "Cannot approve leave request with date start before today") {
+        toast.error("Không thể phê duyệt đơn nghỉ phép trong quá khứ!");
+      } else {
+        toast.error("Có lỗi xảy ra khi phê duyệt đơn nghỉ phép");
+      }
     }
   };
 

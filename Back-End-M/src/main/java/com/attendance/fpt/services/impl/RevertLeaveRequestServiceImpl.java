@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -140,6 +141,10 @@ public class RevertLeaveRequestServiceImpl implements RevertLeaveRequestService 
             throw new IllegalStateException("Cannot approve a non-pending revert leave request");
         }
 
+        if (revertLeaveRequest.getDate().isBefore(LocalDate.now()) || (revertLeaveRequest.getDate().isEqual(LocalDate.now())
+                && revertLeaveRequest.getWorkShift().getStartTime().isBefore(LocalTime.now()))) {
+            throw new ConflictException("Cannot approve revert leave request for past dates");
+        }
 
         Attendance attendance = attendanceRepository.findByAttendanceLeaveByDateAndWorkShiftIdAndStatus(revertLeaveRequest.getDate(),
                         revertLeaveRequest.getWorkShift().getId()

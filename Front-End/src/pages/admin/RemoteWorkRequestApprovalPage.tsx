@@ -231,6 +231,11 @@ export default function RemoteWorkRequestApprovalPage() {
         await loadRemoteWorkRequests();
       }
     } catch (error: any) {
+      if (error.message === "Cannot approve remote work request for past time.") {
+        toast.error("Không thể phê duyệt yêu cầu làm việc từ xa trong quá khứ!");
+      } else {
+        toast.error("Có lỗi xảy ra khi phê duyệt yêu cầu làm việc từ xa");
+      }
       toast.error(error.message || "Có lỗi xảy ra khi duyệt yêu cầu");
     }
   };

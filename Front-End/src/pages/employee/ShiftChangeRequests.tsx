@@ -231,6 +231,8 @@ export default function ShiftChangeRequest() {
     } catch (error: any) {
       if (error.message === "You cannot have work shift required for this shift change request") {
         toast.error("Không thể duyệt yêu cầu đổi ca vì bạn không sở hữu ca làm việc này!");
+      } else if (error.message === "Cannot approve shift change request with past date or work shift that has already started") {
+        toast.error("Không thể duyệt yêu cầu đổi ca vì ngày yêu cầu đã qua hoặc ca làm việc đã bắt đầu!");
       } else {
         toast.error("Có lỗi xảy ra. Vui lòng thử lại!");
       }

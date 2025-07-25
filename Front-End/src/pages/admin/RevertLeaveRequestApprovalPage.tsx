@@ -229,8 +229,12 @@ export default function RevertLeaveRequestApprovalPage() {
       setReasonText("");
       setShowReasonForm(null);
       await loadRevertRequests();
-    } catch (error) {
-      toast.error("Có lỗi xảy ra khi phê duyệt đơn xin đi làm lại");
+    } catch (error: any) {
+      if (error.message === "Cannot approve revert leave request for past dates") {
+        toast.error("Không thể phê duyệt đơn xin đi làm lại trong quá khứ!");
+      } else {
+        toast.error("Có lỗi xảy ra khi phê duyệt đơn xin đi làm lại");
+      }
     }
   };
 
