@@ -149,7 +149,7 @@ public class PartTimeRequestServiceImpl implements PartTimeRequestService {
                 .orElseThrow(() -> new ResourceNotFoundException("Part-time request not found"));
 
         if (partTimeRequest.getStatus() != PartTimeRequestStatus.PENDING) {
-            throw new IllegalStateException("Cannot recall a non-pending request");
+            throw new IllegalStateException("Cannot approve a non-pending request");
         }
 
 
@@ -204,7 +204,7 @@ public class PartTimeRequestServiceImpl implements PartTimeRequestService {
                 .orElseThrow(() -> new ResourceNotFoundException("Part-time request not found"));
 
         if (partTimeRequest.getStatus() != PartTimeRequestStatus.PENDING) {
-            throw new IllegalStateException("Cannot recall a non-pending request");
+            throw new IllegalStateException("Cannot reject a non-pending request");
         }
 
         partTimeRequest.setResponseDate(LocalDateTime.now());
